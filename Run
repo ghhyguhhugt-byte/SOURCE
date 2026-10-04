@@ -1,0 +1,16 @@
+#!/bin/bash
+# تشغيل البوت
+#Usage:  ./Run
+cd "$(cd "$(dirname "$0")" && pwd)" || exit 1
+
+# TDLib (tdlua.so) — بشتغل مرة واحدة بس؛ لو اتفك من tdlua.zip بنفكه تاني
+if [ ! -f ./tdlua.so ]; then
+    echo "⇜ جاري فكّ مكتبة TDLib..."
+    unzip -o tdlua.zip > /dev/null || {
+        echo "✘ فشل فكّ tdlua.zip — تأكد إن unzip متسطب"
+        exit 1
+    }
+fi
+
+# Gold.lua نفسها بتقول لو التوكن ناقص وبتقفل
+exec lua5.3 Gold.lua
