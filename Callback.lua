@@ -53,7 +53,10 @@ end
 end
 end
 if data.new_chat_member.member_id.user_id == tonumber(Gold) or data.old_chat_member.member_id.user_id == tonumber(Gold) then
-if data.new_chat_member.status.rights.can_delete_messages == true or data.old_chat_member.status.rights.can_delete_messages == true then
+-- status.rights بتظهر بس لما البوت يكون أدمن؛ لو اتضاف عضو عادي الحقل ده مش موجود خالص
+local new_rights = data.new_chat_member.status and data.new_chat_member.status.rights
+local old_rights = data.old_chat_member.status and data.old_chat_member.status.rights
+if (new_rights and new_rights.can_delete_messages == true) or (old_rights and old_rights.can_delete_messages == true) then
 local chat_id = data.chat_id
 local who_promot = data.actor_user_id
 --code start
@@ -324,8 +327,7 @@ end
 if msg.content.text then
 text = msg.content.text.text
 end
-if tonumber(msg.sender_id.user_id) == tonumber(Gold) then
-print('This is reply for Bot')
+if msg.sender_id and tonumber(msg.sender_id.user_id) == tonumber(Gold) then
 return false
 end
 if msg.sender_id.luatele == "messageSenderChat" then

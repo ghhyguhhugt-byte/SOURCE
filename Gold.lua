@@ -1525,8 +1525,7 @@ end
 if data.content.text then
 text = data.content.text.text
 end
-if tonumber(msg.sender_id.user_id) == tonumber(Gold) then
-print('This is reply for Bot')
+if msg.sender_id and tonumber(msg.sender_id.user_id) == tonumber(Gold) then
 return false
 end
 if msg.sender_id.luatele == "messageSenderChat" then
@@ -1692,6 +1691,18 @@ elseif msg.content.luatele == "messageChatDeleteMember" then
 Redis:incr(Gold.."Num:DelMember:Days"..msg.chat_id..os.date("%d"))
 end
 -----------------
+if text == "/start" or text == "Start" or text == "ابدأ" then
+local Start_Text = "*⌂Requiring a personal/individual chat for all requests.*\n\n*⌂Please forward your message to my private chat to proceed.*"
+local Start_Keyboard = {
+{
+{text = '⌂  Menu', url = 'https://t.me/'..UserBot},
+},
+{
+{text = '⌂  Developer', url = 'https://t.me/'..UserBot},
+},
+}
+return bot.sendText(msg_chat_id, msg_id, Start_Text, 'md', false, false, false, false, bot.replyMarkup{type='inline', data=Start_Keyboard})
+end
 if msg.content.luatele == "messageChatJoinByLink" and Redis:get(Gold..'Gold:Status:joinet'..msg.chat_id) == 'true' then
 local reply_markup = bot.replyMarkup{
 type = 'inline',
