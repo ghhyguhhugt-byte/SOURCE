@@ -8,15 +8,33 @@ http  = require("socket.http")
 https   = require("ssl.https")
 luatele = require('./libs/luatele')
 --========================================= الإعدادات
-local Config = dofile("./config.lua")
-if type(Config) ~= "table" or not Config.Token or Config.Token == "" then
-io.write('\27[1;31mفي config.lua حط Token بتاعك من @BotFounder، والصور دي بتفتح الملف:\n\27[0;39;49m')
-io.write('\27[1;34m  Token = "123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  \27[0;39;49m\n\n')
-io.write('\27[1;31mلو مش عارف توكنك، افتح @BotFounder واطلب /newbot  \n\27[0;39;49m')
+-- على Docker/Coolify الـ image للقراءة بس، فنعرف من ملف config.lua موجود أصلاً ولا لأ
+function ConfigFileWritable()
+    local f = io.open("config.lua", "r")
+    if f then f:close() return true end
+    return false
+end
+-- config.lua موجود لما تشغّل من السيرفر مباشرة.
+-- على Docker/Coolify مش بيتبعت (مش عايزين التوكن جوه الـ image) فبنعمل واحد فاضي
+local Config
+do
+    local ok, loaded = pcall(dofile, "./config.lua")
+    Config = (ok and type(loaded) == "table") and loaded or {}
+end
+-- على Docker/Coolify بييجي كل حاجة من متغيرات البيئة
+Config.Token = os.getenv("TOKEN") or Config.Token
+Config.SudoId = tonumber(os.getenv("SUDO_ID")) or Config.SudoId
+Config.UserSudo = os.getenv("USER_SUDO") or Config.UserSudo
+Config.OpenAiKey = os.getenv("OPENAI_KEY") or Config.OpenAiKey
+if type(Config.Token) ~= "string" or Config.Token == "" then
+io.write('\27[1;31mمفيش توكن. حطه في config.lua أو كـ متغير بيئة اسمه TOKEN:\n\27[0;39;49m')
+io.write('\27[1;34m  config.lua :  Token = "123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  \27[0;39;49m\n')
+io.write('\27[1;34m  Docker     :  TOKEN=123456789:AAxxxx...  \27[0;39;49m\n\n')
+io.write('\27[1;31mالتوكن من @BotFather → /newbot  \27[0;39;49m')
 os.exit(1)
 end
 if not Config.Token:match("^%d+:") then
-io.write('\27[1;31mالتوكن شكله غلط في config.lua — المفروض يبدأ برقم البوت وبعده نقطتين\n\27[0;39;49m')
+io.write('\27[1;31mالتوكن شكله غلط — المفروض يبدأ برقم البوت وبعده نقطتين\n\27[0;39;49m')
 os.exit(1)
 end
 Token = Config.Token
@@ -30,6 +48,13 @@ session_name = BotId,
 token = Token,
 }
 Gold = BotId
+-- لو المطور اتغيّر من جوه البوت، القيمة الجديدة بتتخزّن في Redis وتبقى هي اللي تقرأ
+if Redis:get(Gold.."info:SudoId") then
+Sudo_Id = tonumber(Redis:get(Gold.."info:SudoId")) or Sudo_Id
+end
+if Redis:get(Gold.."info:UserSudo") then
+UserSudo = Redis:get(Gold.."info:UserSudo")
+end
 -- اليوزرنيم بتاع البوت نفسه، عشان الروابط اللي بتتبعت في الكود (t.me/...?start=...)
 UserBot = UserSudo
 local BotMe = bot.getMe()
@@ -4934,7 +4959,12 @@ end
 if UserName and UserName[2]:match('(%S+)[Bb][Oo][Tt]') then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً  .. لا تستطيع استخـدام معـرف البـوت ؟!*","md",true)  
 end
+-- على Docker/Coolify الـ image للقراءة بس، فمفيش ملف نكتب فيه.
+-- بنخزّن التغيير في Redis (بيضل موجود بعد الريستارت طالما الـ volume)،
+-- والملف لو موجود وده تشغيل عادي فبنكتبه برضه.
+if ConfigFileWritable() then
 local ConfigFile = io.open("config.lua", 'w')
+if ConfigFile then
 ConfigFile:write([[
 return {
 Token = "]]..Token..[[",
@@ -4946,6 +4976,10 @@ OpenAiKey = "]]..OpenAiKey..[[",
 }
 ]])
 ConfigFile:close()
+end
+end
+Redis:set(Gold.."info:UserSudo",text:gsub('@',''))
+Redis:set(Gold.."info:SudoId",UserId_Info.id)
 send(msg_chat_id,msg_id,"\n⇜ تم تغيير المطور اساسي : [@"..text:gsub('@','').."]","md",true)
 dofile('Gold.lua')
 return false

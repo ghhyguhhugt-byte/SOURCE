@@ -2855,7 +2855,7 @@ function luatele.set_config(data)
     luatele.config.token = data.token
   end
   if not luatele_function.exists('.CallBack-Bot') then
-    os.execute('sudo mkdir .CallBack-Bot')
+    os.execute('mkdir -p .CallBack-Bot')
   end
   luatele.config.encryption_key = data.encryption_key or ''
   luatele.config.parameters = {
