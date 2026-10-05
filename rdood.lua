@@ -2600,7 +2600,7 @@ local UserId = text:match('^مسح رده (%d+)$') or text:match('^حذف رده
 if not msg.Managers or not msg.Mamagers then
 return send(msg.chat_id,msg_id,'\n*⇜ هذا الامر يخص { '..Controller_Num(6)..' }* ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg.chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then

@@ -7,6 +7,27 @@ Redis = require('libs/redis').connect('127.0.0.1', 6379)
 http  = require("socket.http")
 https   = require("ssl.https")
 luatele = require('./libs/luatele')
+--========================================= الأدمن
+-- الكود القديم كان يفحص msg.can_be_deleted_for_all_users — حقل مش موجود في TDLib
+-- أصلاً، فكان بيطلع nil والشرط `== false` بيمر، والبوت بيقنع إنه مش أدمن في 69 موضع.
+-- الدالة دي بتقرأ الحالة الحقيقية من TDLib وبتتخزنها (مفيش داعي نطلب كل مرة).
+local BotAdminCache = {}
+local function BotIsAdmin(chat_id)
+    chat_id = tostring(chat_id)
+    local now = os.time()
+    local cached = BotAdminCache[chat_id]
+    -- الكاش بيتجدد كل ٦٠ ثانية، عشان لو البوت اترفع أدمن بعد التشغيل يتحدّث
+    if cached ~= nil and (now - cached.at) < 60 then return cached.val end
+    local ok, info = pcall(bot.getChatMember, chat_id, Gold)
+    local status = ok and info and info.status and info.status.luatele or nil
+    local is_admin = (status == "chatMemberStatusAdministrator" or status == "chatMemberStatusOwner")
+    BotAdminCache[chat_id] = {val = is_admin, at = now}
+    return is_admin
+end
+function RefreshBotAdmin(chat_id)
+    BotAdminCache[tostring(chat_id)] = nil
+    return BotIsAdmin(chat_id)
+end
 --========================================= الإعدادات
 -- على Docker/Coolify الـ image للقراءة بس، فنعرف من ملف config.lua موجود أصلاً ولا لأ
 function ConfigFileWritable()
@@ -6035,9 +6056,9 @@ keyboard.inline_keyboard = {
 local rep = msg.id/2097152/0.5
 https.request("https://api.telegram.org/bot"..Token.."/sendphoto?chat_id="..msg_chat_id.."&caption="..URL.escape(Zilzal).."&photo="..m.."&reply_to_message_id="..rep.."&parse_mode=Markdown&reply_markup="..JSON.encode(keyboard))
 end
-if text == 'تفعيل' and (msg.Developers or msg.Mevelopers) then
-if msg.can_be_deleted_for_all_users == false then
-return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
+if text == 'تفعيل' then
+if not BotIsAdmin(msg_chat_id) then
+return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)
 end
 local Get_Chat = bot.getChat(msg_chat_id)
 local Info_Chats = bot.getSupergroupFullInfo(msg_chat_id)
@@ -6177,7 +6198,7 @@ return send(msg_chat_id,msg_id,textadd,'md', true, false, false, false, reply_ma
 end
 end 
 if text == 'تفعيل' and (not msg.Developers or not msg.Mevelopers) then
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 if Redis:sismember(Gold.."Gold:Text:Cmd:Lock"..msg_chat_id,text) then
@@ -6996,7 +7017,7 @@ end
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Chats = bot.getSupergroupFullInfo(msg_chat_id)
@@ -10466,7 +10487,7 @@ end
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local GetMemberStatus = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
@@ -10503,7 +10524,7 @@ local UserName = text:match('^رفع القيود @(%S+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11072,7 +11093,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 if GetInfoBot(msg).Delmsg == false then
@@ -11120,7 +11141,7 @@ testmod = true
 end
 if testmod == false then
 if not Redis:get(Gold.."spammkick"..msg_chat_id) then 
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,0,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11156,7 +11177,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11186,7 +11207,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص ( المـالك الاسـاسي )*',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11222,7 +11243,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11261,7 +11282,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11293,7 +11314,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11326,7 +11347,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -11363,7 +11384,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) او ( المالك الاساسي )*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11390,7 +11411,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11418,7 +11439,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11445,7 +11466,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11531,7 +11552,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً البوت ليس ادمن في القروب يرجى رفعها وتفعيل الصلاحيات له ","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11558,7 +11579,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً البوت ليس ادمن في القروب يرجى رفعها وتفعيل الصلاحيات له ","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11586,7 +11607,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً البوت ليس ادمن في القروب يرجى رفعها وتفعيل الصلاحيات له ","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11613,7 +11634,7 @@ end
 if statusvar == false then
 return send(msg_chat_id,msg_id,'*⇜ هـذا الامـر يخـص ( مالك المجموعة ) فقـط*',"md",true)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً البوت ليس ادمن في القروب يرجى رفعها وتفعيل الصلاحيات له ","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11691,7 +11712,7 @@ if text == ('رفع مدير عام') and msg.reply_to_message_id ~= 0 then
 if not msg.ControllerBot then 
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(1)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11710,7 +11731,7 @@ local UserName = text:match('^رفع مدير عام @(%S+)$')
 if not msg.ControllerBot then 
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(1)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11730,7 +11751,7 @@ if text == ('تنزيل مدير عام') and msg.reply_to_message_id ~= 0 then
 if not msg.ControllerBot then 
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(1)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -11757,7 +11778,7 @@ if ChannelJoin(msg) == false then
 local reply_markup = bot.replyMarkup{type = 'inline',data = {{{text = Redis:get(Gold..'Gold:Channel:Join:Name'), url = 't.me/'..Redis:get(Gold..'Gold:Channel:Join')}, },}}
 return send(msg.chat_id,msg.id,'\n*⇜ عليك الاشتـراك في قنـاة البـوت لـ استخـدام الاوامـر*',"md",false, false, false, false, reply_markup)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -11791,7 +11812,7 @@ end
 if text and text:match('^حذف تقييم @(%S+)$') then
 local UserName = text:match('^حذف تقييم @(%S+)$')
 if tonumber(msg.sender_id.user_id) == tonumber(Sudo_Id) or tonumber(msg.sender_id.user_id) == tonumber(Sudo_Id) or tonumber(msg.sender_id.user_id) == tonumber(Sudo_Id) then
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه وتفعيل الصلاحيات له*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)
@@ -12499,7 +12520,7 @@ end
 if testmod == false then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12597,7 +12618,7 @@ end
 if testmod == false then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12732,7 +12753,7 @@ local UserName = {text:match('^تقييد (%d+) (.*) @(%S+)$') }
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12774,7 +12795,7 @@ local TimeKed = {text:match('^تقييد (%d+) (.*)$') }
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12814,7 +12835,7 @@ local UserId = {text:match('^تقييد (%d+) (.*) (%d+)$') }
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12850,7 +12871,7 @@ local UserName = text:match('^تقييد @(%S+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if not msg.Originators and not Redis:get(Gold.."Gold:Status:BanId"..msg_chat_id) then
@@ -12908,7 +12929,7 @@ local UserName = text:match('^الغاء التقييد @(%S+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -12932,7 +12953,7 @@ local UserName = text:match('^طرد @(%S+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13036,7 +13057,7 @@ end
 if testmod == false then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13141,7 +13162,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
@@ -13289,7 +13310,7 @@ if text == ('تقييد') or text == ("تقيد") and msg.reply_to_message_id ~=
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13352,7 +13373,7 @@ if text == ('الغاء التقييد') or text == ('الغاء تقييد') or
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13373,7 +13394,7 @@ if text == ('طرد') and msg.reply_to_message_id ~= 0 then
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13443,7 +13464,7 @@ local UserId = text:match('^حظر (%d+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13503,7 +13524,7 @@ local UserId = text:match('^الغاء حظر (%d+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13662,7 +13683,7 @@ local UserId = text:match('^تقييد (%d+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13717,7 +13738,7 @@ local UserId = text:match('^الغاء التقييد (%d+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13735,7 +13756,7 @@ local UserId = text:match('^طرد (%d+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13763,7 +13784,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -13795,7 +13816,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Administrators", "*", 0, 200)
@@ -13830,7 +13851,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Administrators", "*", 0, 200)
@@ -13908,7 +13929,7 @@ if text == 'المالك' or text == 'مالك القروب' or text == 'صاح�
 if Redis:get(Gold..'lock_getadmin'..msg.chat_id) then
 return send(msg_chat_id,msg_id,"*⇜ نداء المالك معطل من قبل المالكين ؟!*","md",true)
 end 
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً البوت ليس ادمن في القروب يرجى رفعه واعطائه الصلاحيات ","md",true)  
 end
 local GetEr = Redis:get(Gold..'Gold:Text:malek'..msg.chat_id)
@@ -14044,7 +14065,7 @@ end
 end
 end
 if text == 'رفع المالك' then
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Administrators", "*", 0, 200)
@@ -14110,7 +14131,7 @@ if text == 'كشف البوتات' or text == 'كشف بوتات' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Bots", "*", 0, 200)
@@ -14133,7 +14154,7 @@ if text == 'المقيدين' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Recent", "*", 0, 200)
@@ -14805,7 +14826,7 @@ if text == "ضع وصف" or text == "وضع وصف" then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).Info == false then
@@ -14818,7 +14839,7 @@ if text == "مسح الوصف" or text == "مسح وصف" or text == "حذف ا�
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).Info == false then
@@ -14832,7 +14853,7 @@ local NameChat = text:match("^ضع اسم (.*)") or text:match("^وضع اسم (
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).Info == false then
@@ -15046,7 +15067,7 @@ if Redis:get(Gold.."Gold:Addictive:PinId"..msg_chat_id) then
 return send(msg_chat_id,msg_id,"*⇜ التثبيت مقفـل من قبـل المالك الاساسي\n⇜ مخصص فقـط لـ المدير واعلى*","md",true)
 end
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).PinMsg == false then
@@ -15060,7 +15081,7 @@ if text == 'الغاء التثبيت' then
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).PinMsg == false then
@@ -15073,7 +15094,7 @@ if text == 'الغاء تثبيت الكل' then
 if not msg.Originators or not msg.Origimators then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(5)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).PinMsg == false then
@@ -15283,7 +15304,7 @@ if text == "المجموعه" or text == "القروب" or text == "المجمو
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Chats = bot.getSupergroupFullInfo(msg_chat_id)
@@ -15399,7 +15420,7 @@ if ChannelJoin(msg) == false then
 local reply_markup = bot.replyMarkup{type = 'inline',data = {{{text = Redis:get(Gold..'Gold:Channel:Join:Name'), url = 't.me/'..Redis:get(Gold..'Gold:Channel:Join')}, },}}
 return send(msg.chat_id,msg.id,'\n*⇜ عليك الاشتـراك في قنـاة البـوت لـ استخـدام الاوامـر*',"md",false, false, false, false, reply_markup)
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Get_Chat = bot.getChat(msg_chat_id)
@@ -15490,7 +15511,7 @@ local CustomTitle = text:match('ضع لقب (.*)')
 if not msg.TheBasics or not msg.TheMasics then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(4)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن او ليست لدي جميع الصلاحيات *","md",true)
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -15517,7 +15538,7 @@ local UserName = {text:match('^ضع لقب @(%S+) (.*)$')}
 if not msg.TheBasics or not msg.TheMasics then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(4)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً البوت ليس ادمن او ليست لدي جميع الصلاحيات* ","md",true)  
 end
 if GetInfoBot(msg).SetAdmin == false then
@@ -15984,7 +16005,7 @@ end
 if GetInfoBot(msg).BanUser == false then
 return send(msg_chat_id,msg_id,'\n⇜ البوت ليس لديه صلاحية حظر المستخدمين ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local Info_Members = bot.getSupergroupMembers(msg_chat_id, "Recent", "*", 0, 200)
@@ -16008,7 +16029,7 @@ if TextMsg == 'البوتات' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -16029,7 +16050,7 @@ if TextMsg == 'المطرودين' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -16056,7 +16077,7 @@ if TextMsg == 'المحذوفين' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -16087,7 +16108,7 @@ if text == 'طرد المحذوفين' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -16117,7 +16138,7 @@ if text == 'طرد البوتات' then
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 if GetInfoBot(msg).BanUser == false then
@@ -16375,7 +16396,7 @@ end
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local GetMemberStatus = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
@@ -16406,7 +16427,7 @@ local UserName = text:match('^كشف القيود @(%S+)$')
 if not msg.Addictive or not msg.Mddictive then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(7)..' ) ',"md",true)  
 end
-if msg.can_be_deleted_for_all_users == false then
+if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
 local UserId_Info = bot.searchPublicChat(UserName)

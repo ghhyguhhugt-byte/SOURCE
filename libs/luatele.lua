@@ -748,6 +748,13 @@ function luatele_function.getChat(chat_id)
     chat_id = chat_id
   }
 end
+function luatele_function.getChatMember(chat_id, user_id)
+  return function_core.run_table{
+    luatele = 'getChatMember',
+    chat_id = chat_id,
+    user_id = user_id
+  }
+end
 function luatele_function.getMessage(chat_id, message_id)
   return function_core.run_table{
     luatele = 'getMessage',
