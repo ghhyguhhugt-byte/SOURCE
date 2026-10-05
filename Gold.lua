@@ -1571,42 +1571,54 @@ file:close()
 return FilePathToSave
 end
 -----------------
+-- طلب HTTP مع مهلة زمنية. ssl.https مافيش timeout عليه، فلو الشبكة بطيئة
+-- أو السيرفر واقع، الطلب بيقعد دقايق والبوت بيقف معاه. 8 ثواني كفاية.
+local function http_get(url)
+    local ok, res = pcall(https.request, {
+        url = url,
+        method = "GET",
+        timeout = 8,
+        sink = io.tmpfile(),
+    })
+    if not ok or type(res) ~= "table" then return nil end
+    local body = io.open(res.filename)
+    if not body then return nil end
+    local data = body:read("*a")
+    body:close()
+    return data
+end
+-- فحص الاشتراك في القناة، مع كاش في الذاكرة.
+-- الفحص ده بيتنادى قبل كل رسالة، ومن غير كاش كل رسالة = طلب HTTP لـ Telegram.
+local JoinCache = {}
+local function is_subscribed(channel, user_id)
+    local key = tostring(channel)..":"..tostring(user_id)
+    local hit = JoinCache[key]
+    local now = os.time()
+    if hit and (now - hit.at) < 300 then return hit.val end
+    local url = http_get('https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..channel..'&user_id='..tostring(user_id))
+    -- الافتراضي true: لو الـ API رجّع error أو اتأخر، نسمح بالامر بدل ما نمنعه
+    local sub = true
+    if url and url ~= "" then
+        local ok, info = pcall(JSON.decode, url)
+        if ok and type(info) == "table" and info.result and info.result.status then
+            if info.result.status == "left" or info.result.status == "kicked" then
+                sub = false
+            end
+        end
+    end
+    JoinCache[key] = {val = sub, at = now}
+    return sub
+end
 function ChannelJoinch(msg)
-JoinChannel = true
 local Channel = Redis:get(Gold..'Gold:Chat:Channel:Join'..msg.chat_id)
-if Channel then
-local ok, url = pcall(https.request, 'https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..tostring(msg.sender_id.user_id))
-if ok and url and url ~= "" then
-local ok2, info = pcall(JSON.decode, url)
--- info.result.status بيرجع "left" للمشترك و "kicked" للمطرود.
--- لو الداتا رجعت ناقصة (rate limit / خطأ شبكة) بنعتبره مشترك —
--- أحسن نسمح بالامر من إننا نمنعه ونقول للمستخدم "اشترك في القناة".
-if ok2 and type(info) == "table" and info.result and info.result.status then
-if info.result.status == "left" or info.result.status == "kicked" then
-JoinChannel = false
-end
-end
-end
-end
-return JoinChannel
+if not Channel then return true end
+return is_subscribed(Channel, msg.sender_id.user_id)
 end
 function ChannelJoin(msg)
-JoinChannel = true
-if not Redis:sismember(Gold.."BotFree:Group:",msg.chat_id) then
+if Redis:sismember(Gold.."BotFree:Group:",msg.chat_id) then return true end
 local Channel = Redis:get(Gold..'Gold:Channel:Join')
-if Channel then
-local ok, url = pcall(https.request, 'https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..tostring(msg.sender_id.user_id))
-if ok and url and url ~= "" then
-local ok2, info = pcall(JSON.decode, url)
-if ok2 and type(info) == "table" and info.result and info.result.status then
-if info.result.status == "left" or info.result.status == "kicked" then
-JoinChannel = false
-end
-end
-end
-end
-end
-return JoinChannel
+if not Channel then return true end
+return is_subscribed(Channel, msg.sender_id.user_id)
 end
 -----------------
 function edit(chat,rep,text,parse, dis, disn, reply_markup)
