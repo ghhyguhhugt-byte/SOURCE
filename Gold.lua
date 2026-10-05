@@ -82,6 +82,79 @@ session_name = BotId,
 token = Token,
 }
 Gold = BotId
+-- ================================================================
+-- حماية مركزية:Tdlib ممكن يرجع nil لأي استدعاء (مستخدم مش موجود،
+-- سجل محذوف، اتصال ضعيف). الكود فيه ~250 استدعاء bot.getUser على
+-- حقل مباشرة (UserInfo.first_name)، وأي nil كان بيوقّف البوت كله.
+-- بنغلّف الدوال اللي بترجع كائنات عشان ترجع جدول فاضي بدل nil،
+-- فالكود كله بيكمل عادي.
+-- ================================================================
+do
+local _getUser = bot.getUser
+bot.getUser = function(user_id)
+    if not user_id then return {} end
+    local ok, info = pcall(_getUser, user_id)
+    if ok and type(info) == "table" then
+        info.username = info.username or ""
+        info.first_name = info.first_name or ""
+        info.last_name = info.last_name or ""
+        return info
+    end
+    return {}
+end
+local _getFullInfo = bot.getUserFullInfo
+bot.getUserFullInfo = function(user_id)
+    if not user_id then return {} end
+    local ok, info = pcall(_getFullInfo, user_id)
+    if ok and type(info) == "table" then return info end
+    return {}
+end
+local _getPhotos = bot.getUserProfilePhotos
+bot.getUserProfilePhotos = function(user_id)
+    if not user_id then return {total_count = 0, photos = {}} end
+    local ok, info = pcall(_getPhotos, user_id)
+    if ok and type(info) == "table" then
+        info.total_count = info.total_count or 0
+        info.photos = info.photos or {}
+        return info
+    end
+    return {total_count = 0, photos = {}}
+end
+local _getChat = bot.getChat
+bot.getChat = function(chat_id)
+    if not chat_id then return {} end
+    local ok, info = pcall(_getChat, chat_id)
+    if ok and type(info) == "table" then
+        info.title = info.title or ""
+        info.permissions = info.permissions or {}
+        return info
+    end
+    return {title = "", permissions = {}}
+end
+local _getSupergroup = bot.getSupergroupFullInfo
+bot.getSupergroupFullInfo = function(chat_id)
+    if not chat_id then return {} end
+    local ok, info = pcall(_getSupergroup, chat_id)
+    if ok and type(info) == "table" then return info end
+    return {member_count = 0, administrator_count = 0, invite_link = {}}
+end
+local _getMessage = bot.getMessage
+bot.getMessage = function(chat_id, message_id)
+    if not chat_id or not message_id then return {} end
+    local ok, info = pcall(_getMessage, chat_id, message_id)
+    if ok and type(info) == "table" then return info end
+    return {}
+end
+local _searchPublic = bot.searchPublicChat
+if _searchPublic then
+bot.searchPublicChat = function(username)
+    if not username then return {} end
+    local ok, info = pcall(_searchPublic, username)
+    if ok and type(info) == "table" then return info end
+    return {}
+end
+end
+end
 -- لو المطور اتغيّر من جوه البوت، القيمة الجديدة بتتخزّن في Redis وتبقى هي اللي تقرأ
 if Redis:get(Gold.."info:SudoId") then
 Sudo_Id = tonumber(Redis:get(Gold.."info:SudoId")) or Sudo_Id
@@ -419,12 +492,13 @@ return Bio
 end
 function getbio(User)
 kk = "لا يوجد"
-local url = https.request("https://api.telegram.org/bot"..Token.."/getchat?chat_id="..User);
-data = json:decode(url)
-if data.result then
-if data.result.bio then
+if not User or User == "" then return kk end
+local ok, url = pcall(https.request, "https://api.telegram.org/bot"..Token.."/getchat?chat_id="..tostring(User))
+if not ok or not url or url == "" then return kk end
+local ok2, data = pcall(json.decode, url)
+if not ok2 or type(data) ~= "table" then return kk end
+if data.result and data.result.bio and data.result.bio ~= "" then
 kk = data.result.bio
-end
 end
 return kk
 end
@@ -8869,7 +8943,9 @@ if (not msg.Distinguished or not msg.Mistinguished) and Redis:get(Gold..'idnotme
 return send(msg.chat_id,msg.id,'\n⇜ امـر ايدي معطـل لـ الاعضـاء*\n*⇜ مسمـوح لـ اصحـاب الـرتب فقـط 🤷🏻‍♀*',"md")
 end
 if not Redis:get(Gold.."Gold:Status:Id"..msg_chat_id) then
-return false
+-- المفتاح ده بيشتغل والبوت مابيقولش حاجة خالص لو مش موجود.
+-- الافتراضي "مفعّل" (Redis بيسيرemptyset = nil = مش مفعّل = البوت صامت)
+Redis:set(Gold.."Gold:Status:Id"..msg_chat_id, "true")
 end
 local UserInfo = bot.getUser(msg.sender_id.user_id)
 local InfoUser = bot.getUserFullInfo(msg.sender_id.user_id)
@@ -8881,7 +8957,7 @@ local RinkBot = msg.Name_Controller
 local TotalMsg = Redis:get(Gold..'Gold:Num:Message:User'..msg_chat_id..':'..msg.sender_id.user_id) or 0
 local DayMsg = Redis:get(Gold..'msg:match:'..msg.chat_id..':'..msg.sender_id.user_id) or 0
 DayMsg = math.floor(DayMsg) -- تقريب العدد لأقرب عدد صحيح أصغر منه
-local TotalPhoto = photo.total_count or 0
+local TotalPhoto = (photo and photo.total_count) or 0
 local TotalEdit = Redis:get(Gold..'Gold:Num:Message:Edit'..msg_chat_id..msg.sender_id.user_id) or 0
 local TotalMsgT = Total_message(TotalMsg) 
 local NumberGames = Redis:get(Gold.."Gold:Num:Add:Games"..msg.chat_id..msg.sender_id.user_id) or 0
@@ -8932,7 +9008,7 @@ local Get_Is_Id = Get_Is_Id:gsub('{تعليق}',Description)
 local Get_Is_Id = Get_Is_Id:gsub('{النقاط}',NumberGames) 
 local Get_Is_Id = Get_Is_Id:gsub('{الصور}',TotalPhoto) 
 local Get_Is_Id = Get_Is_Id:gsub('{البايو}',Bio) 
-if photo.total_count > 0 then
+if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
 if photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
 local thumb_id = photo.photos[1].animation.file.remote.id
@@ -9018,7 +9094,7 @@ local rep = msg.id/2097152/0.5
 return https.request("https://api.telegram.org/bot"..Token.."/sendMessage?chat_id="..msg.chat_id.."&text="..URL.escape(Get_Is_Id).."&reply_to_message_id="..rep..'&parse_mode=html&disable_web_page_preview=true&reply_markup='..JSON.encode(keyboard))
 end
 else
-if photo.total_count > 0 then
+if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
 if photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
 local thumb_id = photo.photos[1].animation.file.remote.id
@@ -14470,8 +14546,8 @@ return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md"
 end
 end
 local photo = bot.getUserProfilePhotos(msg.sender_id.user_id)
-local TotalPhoto = photo.total_count or 0
-if photo.total_count > 0 then
+local TotalPhoto = (photo and photo.total_count) or 0
+if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
 if photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
 local thumb_id = photo.photos[1].animation.file.remote.id
@@ -14563,7 +14639,7 @@ return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md"
 end
 end
 local photo = bot.getUserProfilePhotos(msg.sender_id.user_id)
-local TotalPhoto = photo.total_count or 0
+local TotalPhoto = (photo and photo.total_count) or 0
 if photo.total_count > 0 then
 if photo.photos[numbermypho].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
