@@ -129,6 +129,13 @@ function function_core.run_table(input)
 end
 function function_core.print_error(err)
   print(luatele_function.colors('%{blue}\27[5m There is an error in the file, please correct it %{reset}\n\n%{red}'.. err))
+  -- لو البوت داخل screen، الـ output بيروح هناك ومحدش بيشوفه.
+  -- بنكتبه كمان في ملف عشان نقدر نقراه بعدين.
+  local f = io.open('/tmp/bot_errors.log','a')
+  if f then
+    f:write(os.date('%Y-%m-%d %H:%M:%S').."  "..tostring(err).."\n")
+    f:close()
+  end
 end
 function function_core.send_tdlib(input)
   local to_original = function_core.change_table(input, true)

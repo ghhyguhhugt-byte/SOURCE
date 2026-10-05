@@ -1575,11 +1575,17 @@ function ChannelJoinch(msg)
 JoinChannel = true
 local Channel = Redis:get(Gold..'Gold:Chat:Channel:Join'..msg.chat_id)
 if Channel then
-local url , res = https.request('https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..msg.sender_id.user_id)
-local ChannelJoin = JSON.decode(url)
-var(ChannelJoin)
-if ChannelJoin.result.status == "left" then
+local ok, url = pcall(https.request, 'https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..tostring(msg.sender_id.user_id))
+if ok and url and url ~= "" then
+local ok2, info = pcall(JSON.decode, url)
+-- info.result.status بيرجع "left" للمشترك و "kicked" للمطرود.
+-- لو الداتا رجعت ناقصة (rate limit / خطأ شبكة) بنعتبره مشترك —
+-- أحسن نسمح بالامر من إننا نمنعه ونقول للمستخدم "اشترك في القناة".
+if ok2 and type(info) == "table" and info.result and info.result.status then
+if info.result.status == "left" or info.result.status == "kicked" then
 JoinChannel = false
+end
+end
 end
 end
 return JoinChannel
@@ -1589,11 +1595,13 @@ JoinChannel = true
 if not Redis:sismember(Gold.."BotFree:Group:",msg.chat_id) then
 local Channel = Redis:get(Gold..'Gold:Channel:Join')
 if Channel then
-local url , res = https.request('https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..msg.sender_id.user_id)
-if res == 200 then
-local ChannelJoin = JSON.decode(url)
-if ChannelJoin.result.status == "left" then
+local ok, url = pcall(https.request, 'https://api.telegram.org/bot'..Token..'/getchatmember?chat_id=@'..Channel..'&user_id='..tostring(msg.sender_id.user_id))
+if ok and url and url ~= "" then
+local ok2, info = pcall(JSON.decode, url)
+if ok2 and type(info) == "table" and info.result and info.result.status then
+if info.result.status == "left" or info.result.status == "kicked" then
 JoinChannel = false
+end
 end
 end
 end
@@ -9009,16 +9017,16 @@ local Get_Is_Id = Get_Is_Id:gsub('{النقاط}',NumberGames)
 local Get_Is_Id = Get_Is_Id:gsub('{الصور}',TotalPhoto) 
 local Get_Is_Id = Get_Is_Id:gsub('{البايو}',Bio) 
 if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
-if photo.photos[1].animation then
+if photo.photos[1] and photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
-local thumb_id = photo.photos[1].animation.file.remote.id
-local idd = photo.photos[1].animation.file.id
+local thumb_id = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") or ""
+local idd = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.id) or ""
 if Redis:sismember(Gold.."sex_ids",idd) then
 os.remove(""..num..".mp4")
 return false 
 end
 if Redis:sismember(Gold.."not_sex_ids",idd) then
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 keyboard = {} 
@@ -9042,7 +9050,7 @@ return false
 end
 end
 end
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 keyboard = {} 
@@ -9095,16 +9103,16 @@ return https.request("https://api.telegram.org/bot"..Token.."/sendMessage?chat_i
 end
 else
 if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
-if photo.photos[1].animation then
+if photo.photos[1] and photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
-local thumb_id = photo.photos[1].animation.file.remote.id
-local idd = photo.photos[1].animation.file.id
+local thumb_id = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") or ""
+local idd = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.id) or ""
 if Redis:sismember(Gold.."sex_ids",idd) then
 os.remove(""..num..".mp4")
 return false 
 end
 if Redis:sismember(Gold.."not_sex_ids",idd) then
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 keyboard = {} 
@@ -9128,7 +9136,7 @@ return false
 end
 end
 end
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 keyboard = {} 
@@ -14548,16 +14556,16 @@ end
 local photo = bot.getUserProfilePhotos(msg.sender_id.user_id)
 local TotalPhoto = (photo and photo.total_count) or 0
 if photo and photo.total_count and photo.total_count > 0 and photo.photos and photo.photos[1] then
-if photo.photos[1].animation then
+if photo.photos[1] and photo.photos[1].animation then
 if Redis:get(Gold..'porn'..msg.chat_id) then
-local thumb_id = photo.photos[1].animation.file.remote.id
-local idd = photo.photos[1].animation.file.id
+local thumb_id = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") or ""
+local idd = (photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.id) or ""
 if Redis:sismember(Gold.."sex_ids",idd) then
 os.remove(""..num..".mp4")
 return false 
 end
 if Redis:sismember(Gold.."not_sex_ids",idd) then
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 return bot.sendAnimation(msg.chat_id, msg.id, Name_File,
@@ -14579,7 +14587,7 @@ return false
 end
 end
 end
-local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..photo.photos[1].animation.file.remote.id) 
+local File = request("https://api.telegram.org/bot" .. Token .. "/getfile?file_id="..(photo.photos[1].animation and photo.photos[1].animation.file and photo.photos[1].animation.file.remote and photo.photos[1].animation.file.remote.id) or "") 
 local fc = JSON.decode(File)
 local Name_File = download("https://api.telegram.org/file/bot"..Token.."/"..JSON.decode(File).result.file_path, "./id.mp4") 
 return bot.sendAnimation(msg.chat_id, msg.id, Name_File,
