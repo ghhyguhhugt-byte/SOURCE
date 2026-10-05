@@ -970,7 +970,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".mp4")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -1048,7 +1048,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".jpg")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)

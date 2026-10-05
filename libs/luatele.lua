@@ -2814,7 +2814,17 @@ function luatele.run(main_def, filters)
         table.remove(luatele_timer,timer_id)
       end
     end
-    local update = function_core.change_table(client:receive(1))
+    -- استقبال التحديثات. لازم يكون محمي: أي error هنا (TdLib بيقطع الاتصال،
+    -- أو تحديث مجهول) كان بيقتل البوت كله ويسيب الحلقة.
+    local ok, update = pcall(function() return function_core.change_table(client:receive(1)) end)
+    if not ok then
+      if type(update) == "string" and (update:match("[Cc]onnect") or update:match("[Tt]imeout")) then
+        print('%{red}الاتصال اتقطع — لو بتعملrpc نتعاملها، وإلا البوت هيكمل جوه TDLib\27[0m')
+      else
+        print('%{red}خطأ في استقبال التحديثات: \27[0m'..tostring(update))
+      end
+      goto finish
+    end
     if update then
       if type(update) ~= 'table' then
           goto finish

@@ -56,10 +56,43 @@ if Redis:get(Gold.."info:UserSudo") then
 UserSudo = Redis:get(Gold.."info:UserSudo")
 end
 -- اليوزرنيم بتاع البوت نفسه، عشان الروابط اللي بتتبعت في الكود (t.me/...?start=...)
+-- ملاحظة: ده لازم يبقى يوزرنيم البوت لا يوزرنيم المطور — الـ deep links كلها بتتبني عليه.
+-- الأول نجرّب TDLib، لو ما رجعش نقرأه من Bot API (أضمن مصدر).
 UserBot = UserSudo
-local BotMe = bot.getMe()
-if BotMe and BotMe.usernames and BotMe.usernames.active_usernames then
-UserBot = BotMe.usernames.active_usernames[1]
+local function read_bot_username()
+    -- TDLib: الحقل ممكن يجي string أو table حسب الإصدار
+    local ok, BotMe = pcall(bot.getMe)
+    if ok and BotMe then
+        if BotMe.username and BotMe.username ~= "" then return BotMe.username end
+        if BotMe.usernames then
+            local un = BotMe.usernames.active_usernames
+            if type(un) == "table" and un[1] and un[1] ~= "" then return un[1] end
+            if type(un) == "string" and un ~= "" then return un end
+        end
+    end
+    -- Bot API: أضمن، دايماً بيرجع الحقل ده
+    local ok2, body = pcall(https.request, "https://api.telegram.org/bot"..Token.."/getMe")
+    if ok2 and body then
+        local ok3, info = pcall(JSON.decode, body)
+        if ok3 and info and info.result and info.result.username then
+            return info.result.username
+        end
+    end
+    return nil
+end
+local BotUsername = read_bot_username()
+if BotUsername and BotUsername ~= "" then
+    UserBot = BotUsername
+end
+if not UserBot or UserBot == "" then
+    -- آخر حل: ماينفعش نخليها فاضية، الروابط كلها بتبنى عليها
+    UserBot = Config.UserSudo
+    if not UserBot or UserBot == "" then
+        io.write('\27[1;31mتحذير: مش قادر أقرا يوزرنيم البوت.\n'
+        ..'الروابط (t.me/...) مش هتشتغل لحد ما تضبطه.\n'
+        ..'حط UserSudo في config.lua كـ plan B.  \27[0;39;49m\n')
+        UserBot = "bot"
+    end
 end
 local OpenAiKey = Config.OpenAiKey or ""
 Bot_Name = (Redis:get(Gold.."Gold:Name:Bot") or "بوت")
@@ -364,8 +397,12 @@ end
 function calc(math) 
 math = math:gsub(" ","")
 if math:match("%d+") then
-local res = io.popen("echo 'scale=1; "..math.."' › bc"):read('*a')
+-- بنسمح بأرقام وعمليات حسابية بس ( . + - * / % ( ) ) — أي حاجة تانية ترفض
+if math:match("^[%d%.%+%-%*/%^%(%) ]+$") then
+local res = io.popen("printf '%s\\n' "..string.format("%q", "scale=1; "..math).. " | bc -l 2>/dev/null"):read('*a')
 return res
+end
+return "⇜ لم استطيع اجراء العملية الحسابية"
 else
 return "⇜ لم استطيع اجراء العملية الحسابية"
 end
@@ -1502,10 +1539,90 @@ end
 end
 return bot.sendText(chat,rep,sh,parse,dis, clear, disn, back, markup)
 end
-function ss(msg,text) 
+function ss(msg,text)
 return send(msg.chat_id,msg.id,text)
 end
-function File_Bot_Run(msg,data)  
+-- ==================== كيبورد يوحنا الشخصي ====================
+-- كيبورد خاص بكل عضو: يحفظ كلماته هو بس ومش بتظهر لحد تاني.
+-- بيستخدم reply_markup من نوع reply_keyboard مع selective، وعشان كده
+-- لازم نبعت عن طريق Bot API مباشرة (مش عبر sendMarkup العادي).
+local YK_PREFIX = Gold.."YKeyboard:"
+local YK_ADD = "إضافة كلمة"
+local YK_DEL = "حذف كلمة"
+local YK_CLOSE = "قفل الكيبورد"
+local YK_CANCEL = "إلغاء"
+local function yk_key(chat_id,user_id) return YK_PREFIX..tostring(chat_id)..":"..tostring(user_id) end
+local function yk_state_key(chat_id,user_id) return YK_PREFIX.."state:"..tostring(chat_id)..":"..tostring(user_id) end
+local function yk_is_group(chat_id) return tostring(chat_id):match("^-100%d+$") ~= nil end
+local function yk_keyboard_json(chat_id,user_id)
+local rows={
+{{text="➕ إضافة كلمة",style="success"}},
+{{text="🗑️ حذف كلمة",style="danger"},{text="🔴 قفل الكيبورد",style="danger"}},
+}
+local row={}
+local words=Redis:smembers(yk_key(chat_id,user_id)) or {}
+for _,word in pairs(words) do
+if word and word~="" then
+row[#row+1]={text=tostring(word),style="primary"}
+if #row==2 then rows[#rows+1]=row; row={} end
+end
+end
+if #row>0 then rows[#rows+1]=row end
+return {keyboard=rows,resize_keyboard=true,one_time_keyboard=false,selective=true}
+end
+local function yk_send_keyboard(chat_id,user_id,reply_to,text)
+local markup=URL.escape(JSON.encode(yk_keyboard_json(chat_id,user_id)))
+local q="https://api.telegram.org/bot"..Token.."/sendMessage?chat_id="..URL.escape(tostring(chat_id))
+.."&text="..URL.escape(text or "⌨️ كيبورد يوحنا")
+.."&reply_to_message_id="..URL.escape(tostring(reply_to or 0))
+.."&reply_markup="..markup
+return https.request(q)
+end
+local function yk_show(chat_id,user_id,reply_id)
+return yk_send_keyboard(chat_id,user_id,reply_id,"⌨️ كيبورد يوحنا الشخصي\n\nالكلمات دي بتاعتك إنت فقط، ومش بتظهر لباقي أعضاء المجموعة.")
+end
+local function yk_close(chat_id,reply_id)
+local rm=URL.escape(JSON.encode({remove_keyboard=true,selective=true}))
+local q="https://api.telegram.org/bot"..Token.."/sendMessage?chat_id="..URL.escape(tostring(chat_id))
+.."&text="..URL.escape("🔴 تم قفل كيبورد يوحنا عندك.\nاكتب كيبورد يوحنا لو عايز تفتحه تاني.")
+.."&reply_to_message_id="..URL.escape(tostring(reply_id or 0)).."&reply_markup="..rm
+return https.request(q)
+end
+function HandleYohanaKeyboard(msg,text)
+if not text or not yk_is_group(msg.chat_id) then return false end
+local chat_id,user_id=msg.chat_id,msg.sender_id.user_id
+local state_key=yk_state_key(chat_id,user_id)
+if text=="كيبورد يوحنا" then Redis:del(state_key); return yk_show(chat_id,user_id,msg.id) end
+if text==YK_ADD or text=="➕ إضافة كلمة" then Redis:set(state_key,"add"); return send(chat_id,msg.id,"*➕ ابعت الكلمة اللي عايز تضيفها.*\n\nاكتب `إلغاء` للإلغاء.","md",true) end
+if text==YK_DEL or text=="🗑️ حذف كلمة" then
+local words=Redis:smembers(yk_key(chat_id,user_id)) or {}
+if #words==0 then return send(chat_id,msg.id,"*🗑️ مفيش كلمات محفوظة عندك لحد دلوقتي.*","md",true) end
+Redis:set(state_key,"delete")
+local rows,row={},{}
+for _,word in pairs(words) do
+if word and word~="" then row[#row+1]={text=tostring(word),style="primary"}; if #row==2 then rows[#rows+1]=row; row={} end end
+end
+if #row>0 then rows[#rows+1]=row end
+rows[#rows+1]={{text=YK_CANCEL,style="danger"}}
+local rm=URL.escape(JSON.encode({keyboard=rows,resize_keyboard=true,one_time_keyboard=false,selective=true}))
+return https.request("https://api.telegram.org/bot"..Token.."/sendMessage?chat_id="..URL.escape(tostring(chat_id))
+.."&text="..URL.escape("🗑️ اختار الكلمة اللي عايز تحذفها.")
+.."&reply_to_message_id="..URL.escape(tostring(msg.id)).."&reply_markup="..rm)
+end
+if text==YK_CLOSE or text=="🔴 قفل الكيبورد" then Redis:del(state_key); return yk_close(chat_id,msg.id) end
+local state=Redis:get(state_key)
+if state=="add" then
+if text==YK_CANCEL or text=="الغاء" then Redis:del(state_key); return yk_show(chat_id,user_id,msg.id) end
+if text~="" then Redis:sadd(yk_key(chat_id,user_id),text); Redis:del(state_key); return yk_show(chat_id,user_id,msg.id) end
+elseif state=="delete" then
+if text==YK_CANCEL or text=="الغاء" then Redis:del(state_key); return yk_show(chat_id,user_id,msg.id) end
+if Redis:sismember(yk_key(chat_id,user_id),text) then Redis:srem(yk_key(chat_id,user_id),text); Redis:del(state_key); return yk_show(chat_id,user_id,msg.id) end
+end
+return false
+end
+function File_Bot_Run(msg,data)
+if type(msg) ~= "table" or type(data) ~= "table" then return false end
+if not msg.chat_id or not msg.sender_id or not msg.content then return false end
 local msg_chat_id = msg.chat_id
 local msg_reply_id = msg.reply_to_message_id
 local msg_user_send_id = msg.sender_id.user_id
@@ -1528,6 +1645,7 @@ end
 if msg.sender_id and tonumber(msg.sender_id.user_id) == tonumber(Gold) then
 return false
 end
+if HandleYohanaKeyboard(msg,text) then return false end
 if msg.sender_id.luatele == "messageSenderChat" then
 if Redis:sismember(Gold.."Gold:SilentGroup:Group"..msg_chat_id,msg.sender_id.user_id) then
 bot.deleteMessages(msg.chat_id,{[1]= msg.id})
@@ -1692,16 +1810,34 @@ Redis:incr(Gold.."Num:DelMember:Days"..msg.chat_id..os.date("%d"))
 end
 -----------------
 if text == "/start" or text == "Start" or text == "ابدأ" then
-local Start_Text = "*⌂Requiring a personal/individual chat for all requests.*\n\n*⌂Please forward your message to my private chat to proceed.*"
-local Start_Keyboard = {
-{
-{text = '⌂  Menu', url = 'https://t.me/'..UserBot},
-},
-{
-{text = '⌂  Developer', url = 'https://t.me/'..UserBot},
-},
+if not Redis:get(Gold.."Gold:Start:Bot") then
+local Start_Text = "🤖 أهلا بيك · أنا "..(Redis:get(Gold.."Gold:Name:Bot") or "بوت")
+.."\n\nبحمي جروبك وبشغّل اغاني في الكول وبرد على الناس\n\n"
+.."*⚡ تشغّله في ٣ خطوات*\n*1.* ضيفني لجروبك من الزرار الأخضر تحت\n*2.* ارفعني مشرف\n*3.* هشتغل لوحدي: انت هتبقى «مالك»*"
+local kb = {
+{{text='➕ إضافة البوت للمجموعة', url='https://t.me/'..UserBot..'?startgroup=new'}},
+{{text='👨‍💻 المطور', url='https://t.me/'..UserSudo}},
 }
-return bot.sendText(msg_chat_id, msg_id, Start_Text, 'md', false, false, false, false, bot.replyMarkup{type='inline', data=Start_Keyboard})
+local photo = bot.getUserProfilePhotos(Gold)
+if photo and photo.total_count and photo.total_count>0 then
+local sizes = photo.photos[1].sizes
+local pid = sizes[#sizes].photo.remote.id
+local msgg = msg_id/2097152/0.5
+return https.request('https://api.telegram.org/bot'..Token..'/sendphoto?chat_id='..msg_chat_id
+..'&photo='..URL.escape(pid)..'&caption='..URL.escape(Start_Text)
+..'&reply_to_message_id='..msgg..'&parse_mode=Markdown&disable_web_page_preview=true&reply_markup='
+..URL.escape(JSON.encode({inline_keyboard=kb})))
+end
+return send(msg_chat_id, msg_id, Start_Text, 'md', false, false, false, false, bot.replyMarkup{type='inline', data=kb})
+end
+local custom_start = Redis:get(Gold.."Gold:Start:Bot")
+local kb2 = {
+{{text='➕ إضافة البوت للمجموعة', url='https://t.me/'..UserBot..'?startgroup=new'}},
+{{text='👨‍💻 المطور', url='https://t.me/'..UserSudo}},
+}
+return https.request('https://api.telegram.org/bot'..Token..'/sendMessage?chat_id='..URL.escape(tostring(msg_chat_id))
+..'&text='..URL.escape(custom_start)..'&reply_to_message_id='..URL.escape(tostring(msg_id/2097152/0.5))
+..'&parse_mode=Markdown&reply_markup='..URL.escape(JSON.encode({inline_keyboard=kb2})))
 end
 if msg.content.luatele == "messageChatJoinByLink" and Redis:get(Gold..'Gold:Status:joinet'..msg.chat_id) == 'true' then
 local reply_markup = bot.replyMarkup{
@@ -8772,7 +8908,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".mp4")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -8810,7 +8946,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".jpg")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -8858,7 +8994,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".mp4")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -8896,7 +9032,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".jpg")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -14309,7 +14445,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".mp4")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -14343,7 +14479,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".jpg")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -14403,7 +14539,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".mp4")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
@@ -14439,7 +14575,7 @@ else
 local num = math.random(99999)
 local Fille = json:decode(https.request('https://api.telegram.org/bot'..Token..'/getfile?file_id='..thumb_id))
 local dw = download('https://api.telegram.org/file/bot'..Token..'/'..Fille.result.file_path,""..num..".jpg")
-local out = io.popen("python3.8 ./detect.py '"..dw.."'"):read('*a')
+local out = io.popen('python3 ./detect.py '..shq(dw), 'r'):read('*a')
 print(out)
 if string.find(out, "NONPORN") then
 Redis:sadd(Gold.."not_sex_ids",idd)
