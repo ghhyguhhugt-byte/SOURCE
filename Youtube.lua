@@ -9,7 +9,7 @@ end
 end
 msg_chat_id = msg.chat_id
 msg_id = msg.id
-if tonumber(msg.sender_id.user_id) == tonumber(Fast) then
+if tonumber(msg.sender_id.user_id) == tonumber(Gold) then
 return false
 end
 if text then
@@ -47,7 +47,7 @@ end
 if not Redis:get(Gold.."youtubee"..msg.chat_id)  then
 return send(msg_chat_id,msg_id,GetByName(msg).."⇜ تم تفعيل اليوتيوب مسبقاً","md",true )
 else
-Redis:del(TheMero.."youtubee"..msg.chat_id)
+Redis:del(Gold.."youtubee"..msg.chat_id)
 return send(msg_chat_id,msg_id,GetByName(msg).."⇜ تم تفعيل اليوتيوب","md",true )
 end
 end
@@ -84,7 +84,7 @@ if text == "اليوتيوب للاعضاء" or text == "يوتيوب للاعض
 if not msg.TheBasicsQ then
 return send(msg_chat_id,msg_id,'\n⇜ هذا الامر يخص المالك ',"md",true)
 end
-Redis:del(TheMero.."sochal"..msg.chat_id)
+Redis:del(Gold.."sochal"..msg.chat_id)
 return send(msg.chat_id,msg.id,"⇜ تم تعيين السوشل لجميع الاعضاء ","md",true)
 end
 if text and text:match("^فيس (.*)$") or text and text:match("^(.*) فيس$") then
@@ -117,7 +117,7 @@ local tiklink = text:match("^تيك (.*)$") or text:match("^(.*) تيك$")
 if Redis:get(Gold.."soshle"..msg.chat_id) then
 return false
 end
-if not msg.Distinguished and Redis:get(TheMero.."sochal"..msg.chat_id) then
+if not msg.Distinguished and Redis:get(Gold.."sochal"..msg.chat_id) then
 return send(msg.chat_id,msg.id,"⇜ عذراً عزيزي التيك توك للمميزين ومافوق فقط","md",true)
 end
 local nameuser = bot.getUser(msg.sender_id.user_id)
@@ -166,7 +166,7 @@ local search = text:match("^ساوند (.*)$") or text:match("^(.*) [Ss]$")
 if Redis:get(Gold.."soshle"..msg.chat_id) then
 return false
 end
-if not msg.Distinguished and Redis:get(TheMero.."sochal"..msg.chat_id) then
+if not msg.Distinguished and Redis:get(Gold.."sochal"..msg.chat_id) then
 return send(msg.chat_id,msg.id,"⇜ عذراً عزيزي الساوند للمميزين ومافوق فقط","md",true)
 end
 local jsonson = JSON.decode(request("http://165.22.206.17:8000/get_video_data?url="..URL.escape(search)..""))
