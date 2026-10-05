@@ -4,7 +4,7 @@
 
 return {
     -- توكن البوت من @BotFather (لازم، من غيره البوت مش هيشتغل)
-    Token = "8434123184:AAGWSF8--NCQ1POu1OvATAUgjNOfICVWFTQ",
+    Token = "7715353295:AAGLJbLHqlPLFy4jgQ2kjCkpltPCRP785VI",
 
     -- آيدي حسابك الرقمي على تيليجرام (اختياري، بس من غيره مفيش أوامر مطور)
     SudoId = 5851681806,
