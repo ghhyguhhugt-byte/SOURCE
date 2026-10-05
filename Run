@@ -3,8 +3,23 @@
 # Usage:  ./Run
 cd "$(cd "$(dirname "$0")" && pwd)" || exit 1
 
-# TDLib — بتتفك مرة واحدة وقت الـ docker build، فلو موجودة خلاص
-# لو مش موجودة (تشغيل مباشر من السيرفر) بنفكّها هنا
+# ---------- قفل مفرد ----------
+# لو البوت اتشغّل أكتر من مرة، كل النسخ بتستلم نفس الرسايل من نفس
+# الـ TDLib session وبتتنازع على الـ Redis. ده بيخلي الأوامر تفشل
+# بشكل عشوائي ويبان كأنه البوت "واقف".
+# فبنقتل أي نسخة تانية قبل ما نبدأ.
+if pgrep -f "lua5.3 Gold.lua" > /dev/null 2>&1; then
+    OLD=$(pgrep -f "lua5.3 Gold.lua" | head -1)
+    # نقتل غير الـ screen bot عشان ما نقتلش نفس الجلسة
+    if [ -n "$OLD" ] && [ "$OLD" != "$$" ]; then
+        echo "⇜ في نسخة قديمة شغالة (pid $OLD) — بنوقّفها..."
+        pkill -f "lua5.3 Gold.lua" 2>/dev/null
+        sleep 2
+    fi
+fi
+
+# ---------- TDLib ----------
+# بتتفك مرة واحدة وقت الـ docker build؛ لو مش موجودة بفكّها
 if [ ! -f ./tdlua.so ]; then
     if [ -f ./tdlua.zip ]; then
         echo "⇜ جاري فكّ مكتبة TDLib..."
