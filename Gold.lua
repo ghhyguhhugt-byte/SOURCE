@@ -28,6 +28,19 @@ function RefreshBotAdmin(chat_id)
     BotAdminCache[tostring(chat_id)] = nil
     return BotIsAdmin(chat_id)
 end
+-- getChatMember بترجع nil لو الـ user مش في الجروب أو الـ chat_id غلط.
+-- الكود القديم كان بيعمل StatusMember.status.foo على طول، وأي nil كان
+-- بيطلع error وبيوقّف البوت كله. الدالة دي بترجع جدول فاضي بدل nil.
+local function ChatMember(chat_id, user_id)
+    if not chat_id or not user_id then return {} end
+    local ok, info = pcall(bot.getChatMember, chat_id, user_id)
+    if not ok or type(info) ~= "table" then return {} end
+    if type(info.status) ~= "table" then info.status = {} end
+    if type(info.status.rights) ~= "table" then info.status.rights = {} end
+    info.status.custom_title = info.status.custom_title or ""
+    return info
+end
+GetChatMember = ChatMember
 --========================================= الإعدادات
 -- على Docker/Coolify الـ image للقراءة بس، فنعرف من ملف config.lua موجود أصلاً ولا لأ
 function ConfigFileWritable()
@@ -201,7 +214,7 @@ Addictive = Redis:sismember(Gold.."Gold:Addictive:Group"..ChatId,UserId)
 Mddictive = Redis:sismember(Gold.."Gold:Mddictive:Group"..ChatId,UserId) 
 Distinguished = Redis:sismember(Gold.."Gold:Distinguished:Group"..ChatId,UserId)
 Mistinguished = Redis:sismember(Gold.."Gold:Mistinguished:Group"..ChatId,UserId)
-StatusMember = bot.getChatMember(ChatId,UserId).status.luatele
+StatusMember = ChatMember(ChatId,UserId).status.luatele
 if UserId == Sudo_Id then
 Status = 'مبرمج السورس🎖️'
 elseif UserId == Sudo_Id or UserId == Sudo_Id or UserId == Sudo_Id or UserId == Sudo_Id then
@@ -295,7 +308,7 @@ end
 return Status
 end
 function GetAdminsSlahe(ChatId,UserId,user2,MsgId,t1,t2,t3,t4,t5,t6)
-local GetMemberStatus = bot.getChatMember(ChatId,user2).status
+local GetMemberStatus = ChatMember(ChatId,user2).status
 if GetMemberStatus.can_change_info then
 change_info = '❬ ✔️ ❭' else change_info = '❬ ❌ ❭'
 end
@@ -343,7 +356,7 @@ data = {
 edit(ChatId,MsgId,"*⇜ حـدد صلاحيات المشـرف - *", 'md', false, false, reply_markupp)
 end
 function GetAdminsNum(ChatId,UserId)
-local GetMemberStatus = bot.getChatMember(ChatId,UserId).status
+local GetMemberStatus = ChatMember(ChatId,UserId).status
 if GetMemberStatus.can_change_info then
 change_info = 1 else change_info = 0
 end
@@ -528,8 +541,19 @@ function to_table(index)
 return serpent.block(index , {comment=false})
 end
 function request(req)
-local link = io.popen('curl -s '..shq(req), 'r'):read('*a')
+-- لازم timeout: من غيره، لو الـ API مش بيرد، الـ read('*a') بيستنى للأبد
+-- والبوت بيتجمّد عن كل أوامر الحراسة (الكارت، الاذاعة، البوتات...). 10 ثواني كفاية.
+-- --max-filesize كمان بيمنع الـ curl من ملء الذاكرة لو الـ API رجّع حاجة غريبة.
+local link = io.popen('curl -s --max-time 10 --max-filesize 2M '..shq(req), 'r'):read('*a') or ''
 return link
+end
+-- نسخة آمنة للـ JSON: بترجع nil لو الـ API واقع أو رجّع حاجة مش JSON
+function request_json(req)
+local body = request(req)
+if not body or body == "" then return nil end
+local ok, decoded = pcall(JSON.decode, body)
+if not ok or type(decoded) ~= "table" then return nil end
+return decoded
 end
 BASSE = "https://api.telegram.org/bot" ..Token.. "/"
 function getRes(Url)
@@ -1170,7 +1194,7 @@ UserInfousername = '['..UserInfo.first_name..'](t.me/'..UserInfo.username..')'
 else
 UserInfousername = '['..UserInfo.first_name..'](tg://user?id='..UserId..')'
 end
-local StatusMember = bot.getChatMember(msg.chat_id,UserId).status.luatele
+local StatusMember = ChatMember(msg.chat_id,UserId).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 lockmode = true
 else
@@ -1227,7 +1251,7 @@ Addictive = Redis:sismember(Gold.."Gold:Addictive:Group"..ChatId,UserId)
 Mddictive = Redis:sismember(Gold.."Gold:Mddictive:Group"..ChatId,UserId)
 Distinguished = Redis:sismember(Gold.."Gold:Distinguished:Group"..ChatId,UserId)
 Mistinguished = Redis:sismember(Gold.."Gold:Mistinguished:Group"..ChatId,UserId)
-StatusMember = bot.getChatMember(ChatId,UserId).status.luatele
+StatusMember = ChatMember(ChatId,UserId).status.luatele
 MalekAsase = Redis:sismember(Gold.."Gold:MalekAsase:Group"..ChatId,UserId)
 MalemAsase = Redis:sismember(Gold.."Gold:MalemAsase:Group"..ChatId,UserId)
 if UserId == Sudo_Id then
@@ -1280,7 +1304,7 @@ Addictive = Redis:sismember(Gold.."Gold:Addictive:Group"..ChatId,UserId)
 Mddictive = Redis:sismember(Gold.."Gold:Mddictive:Group"..ChatId,UserId)
 Distinguished = Redis:sismember(Gold.."Gold:Distinguished:Group"..ChatId,UserId)
 Mistinguished = Redis:sismember(Gold.."Gold:Mistinguished:Group"..ChatId,UserId)
-StatusMember = bot.getChatMember(ChatId,UserId).status.luatele
+StatusMember = ChatMember(ChatId,UserId).status.luatele
 MalekAsase = Redis:sismember(Gold.."Gold:MalekAsase:Group"..ChatId,UserId)
 MalemAsase = Redis:sismember(Gold.."Gold:MalemAsase:Group"..ChatId,UserId)
 if UserId == Sudo_Id then
@@ -1331,7 +1355,7 @@ Addictive = Redis:sismember(Gold.."Gold:Addictive:Group"..ChatId,UserId)
 Mddictive = Redis:sismember(Gold.."Gold:Mddictive:Group"..ChatId,UserId)
 Distinguished = Redis:sismember(Gold.."Gold:Distinguished:Group"..ChatId,UserId)
 Mistinguished = Redis:sismember(Gold.."Gold:Mistinguished:Group"..ChatId,UserId)
-StatusMember = bot.getChatMember(ChatId,UserId).status.luatele
+StatusMember = ChatMember(ChatId,UserId).status.luatele
 MalekAsase = Redis:sismember(Gold.."Gold:MalekAsase:Group"..ChatId,UserId)
 MalemAsase = Redis:sismember(Gold.."Gold:MalemAsase:Group"..ChatId,UserId)
 if UserId == Sudo_Id then
@@ -1366,7 +1390,7 @@ end
 return Status
 end 
 function GetInfoBot(msg)
-local GetMemberStatus = bot.getChatMember(msg.chat_id,Gold).status.rights
+local GetMemberStatus = ChatMember(msg.chat_id,Gold).status.rights
 if GetMemberStatus.can_change_info then
 change_info = true else change_info = false
 end
@@ -2259,7 +2283,7 @@ end
 end
 end
 if Redis:get(Gold..msg.chat_id.."thiftgname") then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 SenderMalik = true
 else
@@ -3011,7 +3035,7 @@ end
 end
 end
 if text and (string.match(text, "^%.كتم") or string.match(text, "^%.حظر") or string.match(text, "^%.ضيف") or string.match(text, "^%.مغادره") or string.match(text, "^%.انتحال") or string.match(text, "^%.كرر") or string.match(text, "^%.تكرار") or string.match(text, "^%.مكرر") or string.match(text, "^%.نشر")) then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 testmod = true
 elseif msg.TheBasics or msg.TheMasics then
@@ -4043,7 +4067,7 @@ return send(msg_chat_id,msg_id, "*⇜ تم اضافة الاسـم*  "..text.."\
 end
 ------------------------------------ زلزال الهيبه ------------------------------------
 if text == 'تفعيل مانع انتحال المالك' or text == 'تفعيل كاشف انتحال المالك' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 SenderMalik = true
 else
@@ -4056,7 +4080,7 @@ Redis:setex(Gold..msg.chat_id.."Gold:Add:Thift:Group"..msg.sender_id.user_id,300
 return send(msg_chat_id,msg_id,"*⇜ ارسل لي اسم حسابك الان 🪪*\n\n*⇜ مثـال :*\n*⇜ اذا كان اسم حسابك هو 𝖹Ꭵᥣᴢᥲ️ᥣ </>*\n*⇜ ارسل لي الاسم هكذا فقط 𝖹Ꭵᥣᴢᥲ️ᥣ*\n*⇜ بدون رموز الاسم الاساسي فقط 🥷*","md",true)  
 end
 if text == 'تعطيل مانع انتحال المالك' or text == 'تعطيل كاشف انتحال المالك' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 SenderMalik = true
 else
@@ -4997,7 +5021,7 @@ return send(msg_chat_id,msg_id,"\n*⇜ عـذراً .. لا يوجد حسـاب 
 end
 local ChannelUser = text:gsub('@','')
 if UserId_Info.type.is_channel == true then
-local StatusMember = bot.getChatMember(UserId_Info.id,Gold).status.luatele
+local StatusMember = ChatMember(UserId_Info.id,Gold).status.luatele
 if (StatusMember ~= "chatMemberStatusAdministrator") then
 return send(msg_chat_id,msg_id,"\n⇜ البوت عضو في القناة يرجى رفع البوت ادمن واعادة وضع الاشتراك ","md",true)
 end
@@ -5056,7 +5080,7 @@ return send(msg_chat_id,msg_id,"\n*⇜ عـذراً .. لا يوجد حسـاب 
 end
 local ChannelUser = text:gsub('@','')
 if UserId_Info.type.is_channel == true then
-local StatusMember = bot.getChatMember(UserId_Info.id,Gold).status.luatele
+local StatusMember = ChatMember(UserId_Info.id,Gold).status.luatele
 if (StatusMember ~= "chatMemberStatusAdministrator") then
 return send(msg_chat_id,msg_id,"\n⇜ البوت عضو في القناة يرجى رفع البوت ادمن واعادة وضع الاشتراك ","md",true)  
 end
@@ -6118,7 +6142,7 @@ else
 send(Sudo_Id,0,'\n*⇜ تم تفعيل قروب جديد*\n*⇜ من قبل :* ['..UserInfo.first_name..'](tg://user?id='..msg.sender_id.user_id..') \n*⇜ معلومات القروب :*\n*⇜ عدد الاعضاء :* '..Info_Chats.member_count..'\n*⇜ عدد الادمنيه :* '..Info_Chats.administrator_count..'\n*⇜ عدد المطرودين :* '..Info_Chats.banned_count..'\n*⇜ عدد المقيدين :* '..Info_Chats.restricted_count..'\n*⇜ الرابط :* ['..Get_Chat.title..']('..Info_Chats.invite_link.invite_link..')\n*⇜ ايدي القروب :* `'..msg_chat_id..'`',"md",true, false, false, false, reply_markup)
 end
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id)
 if (StatusMember.status.luatele == "chatMemberStatusAdministrator") then
 if StatusMember.status.can_change_info == true and
 StatusMember.status.can_delete_messages == true and
@@ -6139,7 +6163,7 @@ UserIdMalek = v.member_id.user_id
 Redis:sadd(Gold.."Gold:TheBasicsQ:Group"..msg_chat_id,v.member_id.user_id)
 Redis:sadd(Gold.."Gold:MalekAsase:Group"..msg_chat_id,v.member_id.user_id) 
 else
-local StatusMember = bot.getChatMember(msg_chat_id,v.member_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,v.member_id.user_id)
 if (StatusMember.status.luatele == "chatMemberStatusAdministrator") then
 if StatusMember.status.can_change_info == true and
 StatusMember.status.can_delete_messages == true and
@@ -6209,7 +6233,7 @@ end
 if Redis:sismember(Gold..'Black:listBan:',msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عذراً القروب محظور من قبل المطور*","md",true)  
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 local AddedBot = true
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -6281,7 +6305,7 @@ data = {
 },
 }
 }
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id)
 if (StatusMember.status.luatele == "chatMemberStatusAdministrator") then
 if StatusMember.status.can_change_info == true and
 StatusMember.status.can_delete_messages == true and
@@ -6303,7 +6327,7 @@ UserIdMalek = v.member_id.user_id
 Redis:sadd(Gold.."Gold:TheBasicsQ:Group"..msg_chat_id,v.member_id.user_id)
 Redis:sadd(Gold.."Gold:MalekAsase:Group"..msg_chat_id,v.member_id.user_id) 
 else
-local StatusMember = bot.getChatMember(msg_chat_id,v.member_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,v.member_id.user_id)
 if (StatusMember.status.luatele == "chatMemberStatusAdministrator") then
 if StatusMember.status.can_change_info == true and
 StatusMember.status.can_delete_messages == true and
@@ -6425,7 +6449,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 AddedBot = true
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -6616,7 +6640,7 @@ end
 ----- قفل اي شي خاص بسـورس زلــزال -----
 if text and text:match('^قفل امر (.*)$') then
 local TextMsg = text:match('^قفل امر (.*)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -6633,7 +6657,7 @@ return send(msg_chat_id,msg_id,"*⇜ حسنـاً عـزيـزي اختـر نـ
 end
 if text and text:match('^فتح امر (.*)$') then
 local TextMsg = text:match('^فتح امر (.*)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -6762,7 +6786,7 @@ return send(msg_chat_id,msg_id,
 '',"md",true) 
 end
 if text == "ارفعني مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id)
 if (StatusMember.status.luatele == "chatMemberStatusCreator") then
 Redis:sadd(Gold.."Gold:TheBasicsQ:Group"..msg_chat_id,msg.sender_id.user_id) 
 return send(msg_chat_id,msg_id,'\n*⇜ انت مالك القروب تم ترقيتك*',"md",true)  
@@ -6788,7 +6812,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -6886,7 +6910,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -8036,7 +8060,7 @@ if Locks_Status(msg.sender_id.user_id,msg,text) ~= "noon" then
 return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md",true)
 end
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 return send(msg_chat_id,msg_id,"⇜ انتا صاحب القروب","md",true) 
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -8045,7 +8069,7 @@ else
 return send(msg_chat_id,msg_id,"*⇜ عضو فقط*" ,"md",true) 
 end
 if StatusMember == "chatMemberStatusAdministrator" then 
-local GetMemberStatus = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.rights
+local GetMemberStatus = ChatMember(msg_chat_id,msg.sender_id.user_id).status.rights
 if GetMemberStatus.can_change_info then
 change_info = 'نعم' else change_info = 'لا'
 end
@@ -8075,7 +8099,7 @@ return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md"
 end
 end
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
-local StatusMember = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 return send(msg_chat_id,msg_id,"*⇜ صاحب القروب*","md",true) 
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -8084,7 +8108,7 @@ else
 return send(msg_chat_id,msg_id,"*⇜ عضو فقط*" ,"md",true) 
 end
 if StatusMember == "chatMemberStatusAdministrator" then 
-local GetMemberStatus = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status.rights
+local GetMemberStatus = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status.rights
 if GetMemberStatus.can_change_info then
 change_info = 'نعم' else change_info = 'لا'
 end
@@ -8124,7 +8148,7 @@ end
 if UserName and UserName:match('(%S+)[Bb][Oo][Tt]') then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً  .. لا تستطيع استخـدام معـرف البـوت ؟!*","md",true)  
 end
-local StatusMember = bot.getChatMember(msg_chat_id,UserId_Info.id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,UserId_Info.id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 return send(msg_chat_id,msg_id,"⇜ صاحب القروب","md",true) 
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -8133,7 +8157,7 @@ else
 return send(msg_chat_id,msg_id,"⇜ عضو فقط" ,"md",true) 
 end
 if StatusMember == "chatMemberStatusAdministrator" then 
-local GetMemberStatus = bot.getChatMember(msg_chat_id,UserId_Info.id).status.rights
+local GetMemberStatus = ChatMember(msg_chat_id,UserId_Info.id).status.rights
 if GetMemberStatus.can_change_info then
 change_info = 'نعم' else change_info = 'لا'
 end
@@ -8865,10 +8889,11 @@ local NumAdd = Redis:get(Gold.."Gold:Num:Add:Memp"..msg.chat_id..":"..msg.sender
 local Texting = {"يالبيـه والايـدي 🥺🤍 ","ءاެطلـق ، مـטּ كتب اެيدي 🥺💞","وجودك جبـر لـ قلـبي 💞","عِمـَݛي شهَݪ اެلوسامة 🦋🤍","وانك نعمة اهداها الله لمن حولك 🍂","- مَن بيّن عَادية الأمُور أنت الدهَشة ✨","أنا في رفقتك اتغنى بك حباً سروراً 🤍🫶","إنما الارواح على صفاء نواياها تتلاقى ..🤍🫶","أجمل مافي الصدفة شوفتك 🎼♥️","بالمختصر  انتِ شي حلو محد يشبهه💕 🫶","‏ان النظر إليك طمأنينه 😶♥","‏مَا يشبهك إلا المطر ⛄️ وكل المطر خير و حياة ♥","‏جَبَـرَ الله قلبـكُ ، وقَلبِـي 🥺❤️‍🩹","انك الجميع و كل من احتل قلبي🫀🤍","‏لقـد تعمـقت بِـكَ كَثيـراً والمِيـمُ لام ♥️🙊"}
 local Description = Texting[math.random(#Texting)]
 local Likes = Redis:get(Gold..'Zilzal:Message:Like'..msg.sender_id.user_id) or 0
-local creationdate = request("https://sero-bots.ml/API/DatTele.php?ID="..URL.escape(msg.sender_id.user_id))
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id)
-if StatusMember.status.custom_title ~= "" then
-Lakb = StatusMember.status.custom_title
+local creationdate = request("https://sero-bots.ml/API/DatTele.php?ID="..URL.escape(tostring(msg.sender_id.user_id)))
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id)
+local SM_status = StatusMember and StatusMember.status
+if SM_status and SM_status.custom_title and SM_status.custom_title ~= "" then
+Lakb = SM_status.custom_title
 else
 Lakb = 'مشرف'
 end
@@ -10206,7 +10231,7 @@ local DayMsg = Redis:get(Gold..'msg:match:'..msg.chat_id..':'..Message_Reply.sen
 DayMsg = math.floor(DayMsg) -- تقريب العدد لأقرب عدد صحيح أصغر منه
 local TotalEdit = Redis:get(Gold..'Gold:Num:Message:Edit'..msg_chat_id..Message_Reply.sender_id.user_id) or 0
 local TotalMsgT = Total_message(TotalMsg)
-local StatusMember = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id)
 if StatusMember.status.custom_title ~= "" then
 Lakb = StatusMember.status.custom_title
 else
@@ -10249,7 +10274,7 @@ local DayMsg = Redis:get(Gold..'msg:match:'..msg.chat_id..':'..UserId) or 0
 DayMsg = math.floor(DayMsg) -- تقريب العدد لأقرب عدد صحيح أصغر منه
 local TotalEdit = Redis:get(Gold..'Gold:Num:Message:Edit'..msg_chat_id..UserId) or 0
 local TotalMsgT = Total_message(TotalMsg)
-local StatusMember = bot.getChatMember(msg_chat_id,UserId)
+local StatusMember = ChatMember(msg_chat_id,UserId)
 if StatusMember.status.custom_title ~= "" then
 Lakb = StatusMember.status.custom_title
 else
@@ -10299,7 +10324,7 @@ local Likes = Redis:get(Gold..'Zilzal:Message:Like'..UserId_Info.id) or 0
 local TotalMsg = Redis:get(Gold..'Gold:Num:Message:User'..msg_chat_id..':'..UserId_Info.id) or 0
 local TotalEdit = Redis:get(Gold..'Gold:Num:Message:Edit'..msg_chat_id..UserId_Info.id) or 0
 local TotalMsgT = Total_message(TotalMsg)
-local StatusMember = bot.getChatMember(msg_chat_id,UserId_Info.id)
+local StatusMember = ChatMember(msg_chat_id,UserId_Info.id)
 if StatusMember.status.custom_title ~= "" then
 Lakb = StatusMember.status.custom_title
 else
@@ -10331,7 +10356,7 @@ return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md"
 end
 end
 local UserInfo = bot.getUser(msg.sender_id.user_id)
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 StatusMemberChat = 'مالك اساسي'
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -10349,7 +10374,7 @@ return send(msg_chat_id,msg_id,Locks_Status(msg.sender_id.user_id,msg,text),"md"
 end
 end
 local UserInfo = bot.getUser(msg.sender_id.user_id)
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 StatusMemberChat = 'مالك اساسي'
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -10369,7 +10394,7 @@ else
 UserInfousername = 'لا يوجد يوزر'
 end
 if StatusMemberChat == 'مشرف' then 
-local GetMemberStatus = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status
+local GetMemberStatus = ChatMember(msg_chat_id,msg.sender_id.user_id).status
 if GetMemberStatus.can_change_info then
 change_info = '❬ ✔️ ❭' else change_info = '❬ ❌ ❭'
 end
@@ -10403,7 +10428,7 @@ return send(msg_chat_id,msg_id,
 '*'..(PermissionsUser or '') ,"md",true) 
 end
 if text == 'لقبي' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id)
 if StatusMember.status.custom_title ~= "" then
 Lakb = StatusMember.status.custom_title
 else
@@ -10420,7 +10445,7 @@ end
 end
 if text == 'لقبه' and msg.reply_to_message_id ~= 0 then
 local Message_Reply = bot.getMessage(msg.chat_id, msg.reply_to_message_id)
-local StatusMember = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id)
+local StatusMember = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id)
 if StatusMember.status.custom_title ~= "" then
 Lakb = StatusMember.status.custom_title
 else
@@ -10449,11 +10474,11 @@ if text == 'فحص البوت' or text == 'كشف البوت' or text == 'صلا
 if not msg.Managers or not msg.Mamagers then
 return send(msg_chat_id,msg_id,'\n*⇜ هـذا الامـر يخـص* ( '..Controller_Num(6)..' ) ',"md",true)  
 end
-local StatusMember = bot.getChatMember(msg_chat_id,Gold).status.luatele
+local StatusMember = ChatMember(msg_chat_id,Gold).status.luatele
 if (StatusMember ~= "chatMemberStatusAdministrator") then
 return send(msg_chat_id,msg_id,'⇜ البوت عضو في القروب ',"md",true) 
 end
-local GetMemberStatus = bot.getChatMember(msg_chat_id,Gold).status
+local GetMemberStatus = ChatMember(msg_chat_id,Gold).status
 if GetMemberStatus.can_change_info then
 change_info = 'نعم' else change_info = 'لا'
 end
@@ -10490,7 +10515,7 @@ end
 if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
-local GetMemberStatus = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
+local GetMemberStatus = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
 if GetMemberStatus.luatele == "chatMemberStatusRestricted" then
 Restricted = 'مقيد'
 bot.setChatMemberStatus(msg.chat_id,Message_Reply.sender_id.user_id,'restricted',{1,1,1,1,1,1,1,1})
@@ -10537,7 +10562,7 @@ end
 if UserName and UserName:match('(%S+)[Bb][Oo][Tt]') then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً  .. لا تستطيع استخـدام معـرف البـوت ؟!*","md",true)  
 end
-local GetMemberStatus = bot.getChatMember(msg_chat_id,UserId_Info.id).status
+local GetMemberStatus = ChatMember(msg_chat_id,UserId_Info.id).status
 if GetMemberStatus.luatele == "chatMemberStatusRestricted" then
 Restricted = 'مقيد'
 bot.setChatMemberStatus(msg.chat_id,UserId_Info.id,'restricted',{1,1,1,1,1,1,1,1})
@@ -11111,7 +11136,7 @@ end
 send(msg_chat_id, msg_id, "*⇜ تم مسح "..NumMessage.. ' رسالة 🗑*', 'md')
 end
 if (text == '.ازعاج' or text == '،ازعاج' or text == '-ازعاج' or text == '.تقليد' or text == '،تقليد' or text == '-تقليد') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 testmod = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11133,7 +11158,7 @@ end
 end
 end
 if text == '.تفليش' or text == '،تفليش' or text == '-تفليش' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusAdministrator") then
 testmod = false
 else
@@ -11161,7 +11186,7 @@ end
 end
 end
 if (text == 'رفع مشرف بكل الصلاحيات' or text == 'رفع مشرف كامل الصلاحيات' or text == 'رفع مشرف بكامل الصلاحيات' or text == 'رفع مشرف كامل الصلاحيه') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -11196,7 +11221,7 @@ return send(msg_chat_id, msg_id, "*⇜ تم رفعه مشرف بكافة الص�
 end
 if text and text:match('^رفع مشرف بكل الصلاحيات @(%S+)$') or text and text:match('^رفع مشرف كامل الصلاحيات @(%S+)$') then
 local UserName = text:match('^رفع مشرف بكل الصلاحيات @(%S+)$') or text:match('^رفع مشرف كامل الصلاحيات @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -11227,7 +11252,7 @@ https.request("https://api.telegram.org/bot" .. Token .. "/promoteChatMember?cha
 return send(msg_chat_id, msg_id, "*⇜ تم رفعه مشرف بكافة الصلاحيات ✅*", 'md')
 end
 if text == ('رفع مشرف') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -11266,7 +11291,7 @@ return send(msg_chat_id, msg_id, "*⇜ تم رفعه مشرف .. بنجاح ✅*
 end 
 if text and text:match('^رفع مشرف @(%S+)$') then
 local UserName = text:match('^رفع مشرف @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -11373,7 +11398,7 @@ end
 return send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ تم تنزيله من المشرفين ").Reply,"md",true)  
 end 
 if text == ('رفع مالك اساسي') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11400,7 +11425,7 @@ return send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜
 end
 if text and text:match('^رفع مالك اساسي @(%S+)$') then
 local UserName = text:match('^رفع مالك اساسي @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11428,7 +11453,7 @@ Redis:sadd(Gold.."Gold:MalekAsase:Group"..msg_chat_id,UserId_Info.id)
 return send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر رفعته مالك اساسي ").Reply,"md",true)  
 end 
 if text == ('تنزيل مالك اساسي') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11455,7 +11480,7 @@ return send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜
 end
 if text and text:match('^تنزيل مالك اساسي @(%S+)$') then
 local UserName = text:match('^تنزيل مالك اساسي @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11483,7 +11508,7 @@ Redis:srem(Gold.."Gold:MalekAsase:Group"..msg_chat_id,UserId_Info.id)
 return send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ تم تنزيله مالك اساسي ").Reply,"md",true)  
 end 
 if text == 'المالكين الاساسيين' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11513,7 +11538,7 @@ data = {{{text = '- مسح المالكين الاساسيين', data = msg.send
 return send(msg_chat_id, msg_id, ListMembers, 'md', false, false, false, false, reply_markup)
 end
 if text == 'مسح المالكين الاساسيين' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11541,7 +11566,7 @@ end
 return send(msg_chat_id,msg_id,"*⇜ تم مسح ( "..#Info_Memberss.." ) من المالكين الاساسيين *","md",true)
 end
 if text == ('رفع مالكه اساسيه') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11568,7 +11593,7 @@ return send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜
 end
 if text and text:match('^رفع مالكه اساسيه @(%S+)$') then
 local UserName = text:match('^رفع مالكه اساسيه @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11596,7 +11621,7 @@ Redis:sadd(Gold.."Gold:MalemAsase:Group"..msg_chat_id,UserId_Info.id)
 return send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر رفعته مالكه اساسيه ").Reply,"md",true)  
 end 
 if text == ('تنزيل مالكه اساسيه') and msg.reply_to_message_id ~= 0 then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11623,7 +11648,7 @@ return send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜
 end
 if text and text:match('^تنزيل مالكه اساسيه @(%S+)$') then
 local UserName = text:match('^تنزيل مالكه اساسيه @(%S+)$')
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11651,7 +11676,7 @@ Redis:srem(Gold.."Gold:MalemAsase:Group"..msg_chat_id,UserId_Info.id)
 return send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ تم تنزيلها مالكه اساسيه ").Reply,"md",true)  
 end 
 if text == 'المالكات الاساسيات' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -11681,7 +11706,7 @@ data = {{{text = '- مسح المالكات الاساسيات', data = msg.send
 return send(msg_chat_id, msg_id, ListMembers, 'md', false, false, false, false, reply_markup)
 end
 if text == 'مسح المالكات الاساسيات' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.Developers or msg.Mevelopers then
@@ -13793,7 +13818,7 @@ end
 if StatusCanOrNotCan(msg_chat_id,msg.sender_id.user_id) then
 return send(msg_chat_id,msg_id,"\n⇜ عذراً لا استطيع استخدام الامر على ( "..Controller(msg_chat_id,msg.sender_id.user_id).." ) ","md",true)  
 end
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 KickMe = true
 elseif (StatusMember == "chatMemberStatusAdministrator") then
@@ -13873,7 +13898,7 @@ send(msg_chat_id,msg_id,'\n*⇜ تم رفـع (* '..y..' *) ادمنيـه .. ب
 end
 -----------------
 if text == 'تغيير كليشه المالك' or text == 'تغيير كليشة المالك' or text == 'تغيير يوزر المالك' or text == 'تغيير المالك' or text == 'تغير يوزر المالك' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -13888,7 +13913,7 @@ Redis:set(Gold..'Gold:GetTextMalek'..msg_chat_id..':'..msg.sender_id.user_id,tru
 return send(msg_chat_id,msg_id,'*⇜ ارسـل الان يـوزر المـالك الجديد 🎖*',"md",true)
 end
 if text == 'مسح كليشه المالك' or text == 'مسح كليشة المالك' or text == 'مسح يوزر المالك' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -14686,7 +14711,7 @@ return send(msg_chat_id, msg_id, "Link Group : \n["..LinkGroup.invite_link.. "]"
 end
 ------------------------------------ زلزال الهيبه ------------------------------------
 if text == 'تفعيل جروب اشعارات المالك' or text == 'تفعيل مجموعه اشعارات المالك' or text == 'تفعيل قروب اشعارات المالك' or text == 'تفعيل كروب اشعارات المالك' or text == 'تفعيل اشعارات المالك' or text == 'تفعيل الاشعارات الذكيه' or text == 'تفعيل الاشعارات الذكية' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 else
@@ -14699,7 +14724,7 @@ Redis:set(Gold.."Gold:Add:Loger:Groupbot"..msg_chat_id..":"..msg.sender_id.user_
 return send(msg_chat_id,msg_id,"*⇜ اتبـع الخطـوات التاليـه ليعمـل البـوت بشكـل صحيـح في المجموعـة :*\n\n❶*⇜ قم باضافة البوت لمجموعة الاشعارات وارفعه كامل الصلاحيات*\n❷*⇜ قم بجعل سجل المجموعة ظاهراً*\n❸*⇜ ارسـل الان ايـدي مجمـوعـة الاشعـارات مبدوء بـ -100*\n\n*⇜ لـ الالغـاء ارسـل (الغاء)*","md",true)  
 end
 if text == 'تعطيل جروب اشعارات المالك' or text == 'تعطيل مجموعه اشعارات المالك' or text == 'تعطيل قروب اشعارات المالك' or text == 'تعطيل كروب اشعارات المالك' or text == 'تعطيل اشعارات المالك' or text == 'تعطيل الاشعارات الذكيه' or text == 'تعطيل الاشعارات الذكية' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 else
@@ -15484,7 +15509,7 @@ return send(msg_chat_id, msg_id, "⇜ صلاحيات القروب : ", 'md', fal
 end
 -----------------
 if text == "تنزيل جميع الرتب" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.TheBasicsQ or msg.TheMasicsQ then
@@ -15883,7 +15908,7 @@ Redis:del(Gold.."Gold:Developers:Groups")
 return send(msg_chat_id,msg_id,"⇜ تم مسح ( "..#Info_Members.." ) من المطـورين ","md",true)
 end
 if TextMsg == 'المالكين' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = ChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -16399,7 +16424,7 @@ end
 if not BotIsAdmin(msg_chat_id) then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً البـوت ليـس مشـرفاً .. يرجـى رفعـه وإعطـائه كـافة الصـلاحيات*","md",true)  
 end
-local GetMemberStatus = bot.getChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
+local GetMemberStatus = ChatMember(msg_chat_id,Message_Reply.sender_id.user_id).status
 if GetMemberStatus.luatele == "chatMemberStatusRestricted" then
 Restricted = 'نعم'
 else
@@ -16440,7 +16465,7 @@ end
 if UserName and UserName:match('(%S+)[Bb][Oo][Tt]') then
 return send(msg_chat_id,msg_id,"\n*⇜ عـذراً  .. لا تستطيع استخـدام معـرف البـوت ؟!*","md",true)  
 end
-local GetMemberStatus = bot.getChatMember(msg_chat_id,UserId_Info.id).status
+local GetMemberStatus = ChatMember(msg_chat_id,UserId_Info.id).status
 if GetMemberStatus.luatele == "chatMemberStatusRestricted" then
 Restricted = 'نعم'
 else
@@ -16783,7 +16808,7 @@ local x = 0
 for k,v in pairs(list) do  
 local Get_Chat = bot.getChat(v)
 if Get_Chat.id then
-local statusMem = bot.getChatMember(Get_Chat.id,Gold)
+local statusMem = ChatMember(Get_Chat.id,Gold)
 if statusMem.status.luatele == "chatMemberStatusMember" then
 x = x + 1
 send(Get_Chat.id,0,'*⇜ البوت عضو في القروب سوف اغادر*',"md")
@@ -19260,7 +19285,7 @@ local x = 0
 for k,v in pairs(list) do  
 local Get_Chat = bot.getChat(v)
 if Get_Chat.id then
-local statusMem = bot.getChatMember(Get_Chat.id,Gold)
+local statusMem = ChatMember(Get_Chat.id,Gold)
 if statusMem.status.luatele == "chatMemberStatusMember" then
 x = x + 1
 send(Get_Chat.id,0,'*⇜ البوت عضو في القروب سوف اغادر*',"md")
@@ -19370,7 +19395,7 @@ return send(msg_chat_id,msg_id,"\n*⇜ عـذراً .. لا يوجد حسـاب 
 end
 local ChannelUser = text:gsub('@','')
 if UserId_Info.type.is_channel == true then
-local StatusMember = bot.getChatMember(UserId_Info.id,Gold).status.luatele
+local StatusMember = ChatMember(UserId_Info.id,Gold).status.luatele
 if (StatusMember ~= "chatMemberStatusAdministrator") then
 return send(msg_chat_id,msg_id,"\n⇜ البوت عضو في القناة يرجى رفع البوت ادمن واعادة تفعيله ","md",true)  
 end

@@ -57,7 +57,7 @@ send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر نزلته م�
 end
 end
 if UserName[1] == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -478,7 +478,7 @@ send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر نزلتها �
 end
 end
 if UserName[1] == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -899,7 +899,7 @@ send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜ ابش
 end
 end
 if TextMsg == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1345,7 +1345,7 @@ send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜ ابش
 end
 end
 if TextMsg == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2158,7 +2158,7 @@ return send(msg_chat_id,msg_id,Reply_Status(UserId,"⇜ ابشر نزلته من
 end
 end
 if UserId[1] == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2590,7 +2590,7 @@ return send(msg_chat_id,msg_id,Reply_Status(UserId,"⇜ ابشر نزلتها م
 end
 end
 if UserId[1] == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -3035,7 +3035,7 @@ send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر رفعته م�
 end
 end
 if UserName[1] == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -3482,7 +3482,7 @@ send(msg_chat_id,msg_id,Reply_Status(UserId_Info.id,"⇜ ابشر رفعتها �
 end
 end
 if UserName[1] == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -3909,7 +3909,7 @@ send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜ ابش
 end
 end
 if TextMsg == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -4371,7 +4371,7 @@ send(msg_chat_id,msg_id,Reply_Status(Message_Reply.sender_id.user_id,"⇜ ابش
 end
 end
 if TextMsg == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -5517,7 +5517,7 @@ return send(msg_chat_id,msg_id,Reply_Status(UserId,"⇜ ابشر رفعته مط
 end
 end
 if UserId[1] == "مالك" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -5957,7 +5957,7 @@ return send(msg_chat_id,msg_id,Reply_Status(UserId,"⇜ ابشر رفعتها م
 end
 end
 if UserId[1] == "مالكه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -6450,7 +6450,7 @@ data = {{{text = 'مسح المطورات', data = msg.sender_id.user_id..'/Meve
 return send(msg_chat_id, msg_id, ListMembers, 'md', false, false, false, false, reply_markup)
 end
 if text == 'المالكين' or text == 'مسح المالكين' then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then

@@ -1655,7 +1655,7 @@ Redis:set(Gold.."zed:zagel"..msg_chat_id,"off")
 send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم قفل زاجل .. بنجـاح").Lock,"md",true)  
 end
 if text == "قفل الحمايه" or text =="قفل الحماية" or text =="تفعيل الحمايه" or text =="تفعيل الحماية" or text =="تفعيل حمايه" or text == "قفل التفليش" or text == "تفعيل الحمايه 2" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1680,7 +1680,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم تفعيل 
 return false
 end 
 if text == "فتح الحمايه" or text =="فتح الحماية" or text =="تعطيل الحمايه" or text =="تعطيل الحماية" or text =="تعطيل حمايه" or text == "فتح التفليش" or text == "تعطيل الحمايه 2" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1699,7 +1699,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم تعطيل 
 return false
 end
 if text == "قفل التفليش" or text == "تفعيل الحمايه 2" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1724,7 +1724,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم قفـل ج
 return false
 end 
 if text == "فتح التفليش" or text == "تعطيل الحمايه 2" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1747,7 +1747,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم فتـح ا
 return false
 end
 if text == "قفل الاباحي" or text == "قفل اباحي" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1766,7 +1766,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم تفعيـ�
 return false
 end 
 if text == "فتح الاباحي" or text == "فتح اباحي" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1791,7 +1791,7 @@ return false
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم الحظر" or text == "تحكم الطرد" or text == "تعطيل امر الحظر" or text == "تعطيل امر حظر" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1819,7 +1819,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر الحظر" or text == "تفعيل امر حظر" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1847,7 +1847,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم الكتم" or text == "تعطيل امر الكتم" or text == "تعطيل امر كتم" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1874,7 +1874,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر الكتم" or text == "تفعيل امر كتم" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1901,7 +1901,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم الرفع" or text == "تعطيل امر الرفع" or text == "تعطيل امر رفع" or text == "قفل امر الرفع" or text == "قفل امر رفع" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1929,7 +1929,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر الرفع" or text == "تفعيل امر رفع" or text == "فتح امر الرفع" or text == "فتح امر رفع" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1950,7 +1950,7 @@ return false
 end 
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم التنزيل" or text == "تعطيل امر التنزيل" or text == "تعطيل امر تنزيل" or text == "قفل امر التنزيل" or text == "قفل امر تنزيل" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1978,7 +1978,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر التنزيل" or text == "تفعيل امر تنزيل" or text == "فتح امر التنزيل" or text == "فتح امر تنزيل" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -1999,7 +1999,7 @@ return false
 end 
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم مسح رد" or text == "تعطيل امر مسح رد" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2027,7 +2027,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر مسح رد" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2055,7 +2055,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم تثبيت" or text == "تعطيل امر تثبيت" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2083,7 +2083,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر تثبيت" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2111,7 +2111,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم همسه" or text == "تعطيل امر الهمسه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2139,7 +2139,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر همسه" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2167,7 +2167,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تحكم اضف رد" or text == "تعطيل امر اضف رد" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2195,7 +2195,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر اضف رد" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2223,7 +2223,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تعطيل امر تفعيل افتاري" or text == "تعطيل امر تفعيل صورتي" or text == "تعطيل امر فتح افتاري" or text == "تعطيل امر فتح صورتي" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2250,7 +2250,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر تفعيل افتاري" or text == "تفعيل امر تفعيل صورتي" or text == "تفعيل امر فتح افتاري" or text == "تفعيل امر فتح صورتي" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2277,7 +2277,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تعطيل امر تعطيل الايدي" or text == "تعطيل امر تفعيل الايدي بالصوره" or text == "تعطيل امر فتح الايدي" or text == "تعطيل امر فتح الايدي بالصوره" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -2304,7 +2304,7 @@ return send(msg_chat_id,msg_id,zilzal,"md",false, false, false, false, reply_mar
 end
 ---------------------- Dev ZilZal ----------------------
 if text == "تفعيل امر تعطيل الايدي" or text == "تفعيل امر تفعيل الايدي بالصوره" or text == "تفعيل امر فتح الايدي" or text == "تفعيل امر فتح الايدي بالصوره" then
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -3313,7 +3313,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم فتح ال
 return false
 end
 if text == "قفل تيليثون" or text == "قفل تليثون" or text == "قفل تيلثون" or text == "قفل جمثون" or text == "قفل زدثون" or text == "قفل الجمثون" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then
@@ -3335,7 +3335,7 @@ send(msg_chat_id,msg_id,Reply_Status(msg.sender_id.user_id,"⇜ تم قفل ال
 return false
 end
 if text == "فتح تيليثون" or text == "فتح تليثون" or text == "فتح تيلثون" or text == "فتح جمثون" or text == "فتح زدثون" or text == "فتح الجمثون" then 
-local StatusMember = bot.getChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg_chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 elseif msg.MalekAsase or msg.MalemAsase then

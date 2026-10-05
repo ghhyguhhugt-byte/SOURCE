@@ -2264,7 +2264,7 @@ Redis:del(Gold.."rtpaspecial"..msg.chat_id)
 Redis:del(Gold.."rtpaspecialmsg"..msg.chat_id)
 end
 if msgcountneed[2] == "مالك اساسي" or msgcountneed[2] == "مالك الاساسي" or msgcountneed[2] == "المالك الاساسي" then
-local StatusMember = bot.getChatMember(msg.chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg.chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 else
@@ -2330,7 +2330,7 @@ return send(msg_chat_id,msg_id,'*⇜ عـذراً .. عـزيـزي 🤷🏻‍�
 end
 local msgcountdel = text:match('^حذف تفاعل (.*)$') or text:match('^مسح تفاعل (.*)$')  or text:match('^مسح التفاعل (.*)$') or text:match('^حذف التفاعل (.*)$')
 if msgcountdel == "مالك اساسي" or msgcountdel == "مالك الاساسي" or msgcountdel == "المالك الاساسي" then
-local StatusMember = bot.getChatMember(msg.chat_id,msg.sender_id.user_id).status.luatele
+local StatusMember = GetChatMember(msg.chat_id,msg.sender_id.user_id).status.luatele
 if (StatusMember == "chatMemberStatusCreator") then
 statusvar = true
 else
