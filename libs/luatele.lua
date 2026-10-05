@@ -2982,5 +2982,44 @@ function luatele.login(state)
   elseif not (state.luatele and luatele_function.in_array({'updateConnectionState', 'updateSelectedBackground', 'updateConnectionState', 'updateOption',}, state.luatele)) then
     return true
   end
+  -- TDLib 1.8+ بيبعت حالة المصادقة في الـ update نفسه (مش جوه .authorization_state)
+  -- زي authorizationStateWaitTdlibParameters / WaitPhoneNumber / Ready / Closed.
+  -- الكود فوق بيفحص .authorization_state بس، فكانت الحالات دي بتضيع خالص والبوت
+  -- بيقف بعد "Lib is Running" من غير ما يسجّل دخول ولا يرد على أي رسالة.
+  if state.luatele == 'authorizationStateWaitTdlibParameters' then
+    function_core.send_tdlib{
+      luatele = 'setTdlibParameters',
+      parameters = luatele.config.parameters
+    }
+  elseif state.luatele == 'authorizationStateWaitEncryptionKey' then
+    function_core.send_tdlib{
+      luatele = 'checkDatabaseEncryptionKey',
+      encryption_key = luatele.config.encryption_key
+    }
+  elseif state.luatele == 'authorizationStateWaitPhoneNumber' then
+    if luatele.config.is_bot then
+      function_core.send_tdlib{
+        luatele = 'checkAuthenticationBotToken',
+        token = luatele.config.token
+      }
+    else
+      function_core.send_tdlib{
+        luatele = 'setAuthenticationPhoneNumber',
+        phone_number = luatele.config.phone
+      }
+    end
+  elseif state.luatele == 'authorizationStateReady' then
+    print(luatele_function.colors("%{yellow}The files have been connected and played \nAnd Source Run normal"))
+  elseif state.luatele == 'authorizationStateClosed' then
+    print(luatele_function.colors('%{yellow}>> authorization state closed '))
+    luatele.get_update = false
+  elseif state.luatele and state.luatele:match("^authorizationStateWait") then
+    -- WaitCode / WaitPassword / WaitRegistration: البوت مش محتاجهم
+    print(luatele_function.colors('%{red}محتاج توكن بوت صحيح — الحالة: \27[0m'..tostring(state.luatele)))
+  elseif state.luatele and state.luatele:match("^updateAuthorizationState") then
+    -- غلاف: estado المصادقة جواها
+    local inner = state.authorization_state
+    if inner then return luatele.login(inner) end
+  end
 end
 return luatele
